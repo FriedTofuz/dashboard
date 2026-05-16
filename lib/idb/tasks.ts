@@ -2,6 +2,7 @@
 
 import { getDb, type Task } from './db';
 import { enqueue } from './queue';
+import { applyTaskToDeficit } from '@/lib/compute/deficit';
 
 function now() { return Date.now(); }
 function newId() { return crypto.randomUUID(); }
@@ -39,7 +40,6 @@ export async function startTimer(taskId: string): Promise<void> {
   const db = getDb();
   const ts = now();
 
-  // Pause any currently running task (atomic-ish: Dexie transactions are serial)
   await db.transaction('rw', db.tasks, async () => {
     const running = await db.tasks.where('state').equals('running').first();
     if (running && running.id !== taskId) {
@@ -50,7 +50,9 @@ export async function startTimer(taskId: string): Promise<void> {
         elapsed_ms: elapsed,
         updated_at: ts,
       });
-      enqueue('upsert', 'tasks', running.id, taskToRemote({ ...running, state: 'paused', elapsed_ms: elapsed }));
+      enqueue('upsert', 'tasks', running.id, taskToRemote({
+        ...running, state: 'paused', started_at: null, elapsed_ms: elapsed, updated_at: ts,
+      }));
     }
     await db.tasks.update(taskId, {
       state: 'running',
@@ -71,9 +73,22 @@ export async function pauseTimer(taskId: string): Promise<void> {
   await updateTask(taskId, { state: 'paused', started_at: null, elapsed_ms: elapsed });
 }
 
-export async function completeTask(taskId: string, note?: string): Promise<void> {
+/**
+ * Heartbeat: fold the running window into elapsed_ms and reset started_at to now.
+ * Called every 30s and on visibility/unload so a crash loses ≤ 30s.
+ */
+export async function heartbeatTimer(taskId: string): Promise<void> {
   const ts = now();
   const task = await getDb().tasks.get(taskId);
+  if (!task || task.state !== 'running' || !task.started_at) return;
+  const elapsed = task.elapsed_ms + (ts - task.started_at);
+  await updateTask(taskId, { elapsed_ms: elapsed, started_at: ts });
+}
+
+export async function completeTask(taskId: string, note?: string): Promise<void> {
+  const ts = now();
+  const db = getDb();
+  const task = await db.tasks.get(taskId);
   if (!task) return;
 
   const actualMs = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
@@ -86,9 +101,32 @@ export async function completeTask(taskId: string, note?: string): Promise<void>
     completed_at: ts,
     completion_note: note,
   });
+
+  // Update cumulative deficit
+  const settings = await db.settings.toCollection().first();
+  if (settings) {
+    const { newDeficit } = applyTaskToDeficit(
+      task.est_minutes,
+      actualMs,
+      settings.deficit_seconds,
+    );
+    await db.settings.update(settings.user_id, {
+      deficit_seconds: newDeficit,
+      updated_at: ts,
+    });
+    enqueue('upsert', 'settings', settings.user_id, {
+      user_id: settings.user_id,
+      deficit_seconds: newDeficit,
+      updated_at: new Date(ts).toISOString(),
+    });
+  }
 }
 
 export async function uncompleteTask(taskId: string): Promise<void> {
+  const db = getDb();
+  const task = await db.tasks.get(taskId);
+  if (!task || task.state !== 'done') return;
+
   await updateTask(taskId, {
     state: 'open',
     actual_ms: null,
@@ -96,27 +134,79 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     completion_note: undefined,
     elapsed_ms: 0,
   });
+
+  // Reverse the deficit change. We can't perfectly reverse (the floor-at-0 is lossy)
+  // but doing best-effort keeps the tally close.
+  if (task.actual_ms != null) {
+    const settings = await db.settings.toCollection().first();
+    if (settings) {
+      const estSec = task.est_minutes * 60;
+      const actualSec = task.actual_ms / 1000;
+      const delta = actualSec > estSec
+        ? -Math.ceil((actualSec - estSec) / 60) * 60
+        : 300;
+      const newDeficit = Math.max(0, settings.deficit_seconds + delta);
+      await db.settings.update(settings.user_id, {
+        deficit_seconds: newDeficit,
+        updated_at: Date.now(),
+      });
+      enqueue('upsert', 'settings', settings.user_id, {
+        user_id: settings.user_id,
+        deficit_seconds: newDeficit,
+        updated_at: new Date().toISOString(),
+      });
+    }
+  }
 }
 
-export async function setR3Slot(taskId: string, slot: 1 | 2 | 3 | null, dayKey: string): Promise<void> {
+export async function setR3Slot(
+  taskId: string,
+  slot: 1 | 2 | 3 | null,
+  dayKey: string,
+): Promise<void> {
   const db = getDb();
+  const ts = now();
   await db.transaction('rw', db.tasks, async () => {
-    // Clear slot if another task is there
     if (slot !== null) {
       const occupant = await db.tasks
         .where('[user_id+day_key]')
         .between(['', dayKey], ['￿', dayKey])
-        .filter(t => t.r3_slot === slot && t.id !== taskId)
+        .filter((t) => t.r3_slot === slot && t.id !== taskId)
         .first();
       if (occupant) {
-        await db.tasks.update(occupant.id, { r3_slot: null, updated_at: now() });
-        enqueue('upsert', 'tasks', occupant.id, taskToRemote({ ...occupant, r3_slot: null }));
+        await db.tasks.update(occupant.id, { r3_slot: null, updated_at: ts });
+        enqueue('upsert', 'tasks', occupant.id, taskToRemote({ ...occupant, r3_slot: null, updated_at: ts }));
       }
     }
-    await db.tasks.update(taskId, { r3_slot: slot, updated_at: now() });
+    await db.tasks.update(taskId, { r3_slot: slot, updated_at: ts });
   });
   const updated = await db.tasks.get(taskId);
   if (updated) enqueue('upsert', 'tasks', taskId, taskToRemote(updated));
+}
+
+/** Reorder: place taskId between two siblings (fractional indexing). */
+export async function reorderTask(
+  taskId: string,
+  beforeSortOrder: number | null,
+  afterSortOrder: number | null,
+): Promise<void> {
+  let newOrder: number;
+  if (beforeSortOrder == null && afterSortOrder == null) newOrder = 0;
+  else if (beforeSortOrder == null) newOrder = (afterSortOrder as number) - 1;
+  else if (afterSortOrder == null) newOrder = beforeSortOrder + 1;
+  else newOrder = (beforeSortOrder + afterSortOrder) / 2;
+
+  await updateTask(taskId, { sort_order: newOrder });
+}
+
+/** Move a task to another day. */
+export async function moveTaskToDay(taskId: string, dayKey: string): Promise<void> {
+  await updateTask(taskId, { day_key: dayKey, r3_slot: null });
+}
+
+/** Toggle skip on a habit instance. */
+export async function skipTask(taskId: string, skipped = true): Promise<void> {
+  await updateTask(taskId, { skipped });
 }
 
 // ── Serialization ─────────────────────────────────────────────────────────

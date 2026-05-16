@@ -1,5 +1,6 @@
 'use client';
 
+import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { setR3Slot } from '@/lib/idb/tasks';
 import { elapsedLabel } from '@/lib/time/dayKey';
@@ -13,9 +14,12 @@ interface RuleOf3SlotProps {
 }
 
 export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
-  const { activeTaskId, tickMs } = useTimerStore();
+  const activeTaskId = useTimerStore((s) => s.activeTaskId);
+  const tickMs = useTimerStore((s) => s.tickMs);
   const isRunning = task && task.state === 'running';
   const isActive = task && activeTaskId === task.id;
+
+  const droppable = useDroppable({ id: `r3-${slot}-${dayKey}` });
 
   const elapsed = isActive
     ? tickMs
@@ -29,24 +33,30 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
 
   if (!task) {
     return (
-      <div className="ink-box-dashed paper rounded-card p-4 flex-1 col gap-1 min-h-[90px] justify-center">
+      <div
+        ref={droppable.setNodeRef}
+        className={cn(
+          'ink-box-dashed paper rounded-card p-4 flex-1 col gap-1 min-h-[90px] justify-center transition-colors',
+          droppable.isOver && 'wash-sage',
+        )}
+      >
         <span className="tiny">priority {slot}</span>
         <p className="font-hand text-body-lg muted" style={{ opacity: 0.55 }}>
-          what matters most?
+          {droppable.isOver ? 'drop here' : 'what matters most?'}
         </p>
-        <p className="tiny" style={{ opacity: 0.5 }}>
-          — tap to set —
-        </p>
+        <p className="tiny" style={{ opacity: 0.5 }}>— drag a task here —</p>
       </div>
     );
   }
 
   return (
     <div
+      ref={droppable.setNodeRef}
       className={cn(
-        'paper rounded-card p-4 flex-1 col gap-1 min-h-[90px] relative',
+        'paper rounded-card p-4 flex-1 col gap-1 min-h-[90px] relative transition-colors',
         task.state === 'done' ? 'ink-box-soft' : 'ink-box-sage',
         isRunning && 'wash-terra',
+        droppable.isOver && 'wash-sage',
       )}
     >
       {isRunning && <div className="tape" />}
@@ -62,7 +72,12 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
         </span>
       </div>
 
-      <span className={cn('font-hand text-body-lg leading-tight', task.state === 'done' && 'strike')}>
+      <span
+        className={cn(
+          'font-hand text-body-lg leading-tight',
+          task.state === 'done' && 'strike',
+        )}
+      >
         {task.title}
       </span>
 

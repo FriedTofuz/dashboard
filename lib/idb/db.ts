@@ -87,10 +87,10 @@ export class SunflowerDB extends Dexie {
   constructor() {
     super('sunflower');
     this.version(1).stores({
-      tasks:          'id, user_id, day_key, template_id, state, updated_at',
-      habit_templates:'id, user_id, active',
+      tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+      habit_templates:'id, user_id, active, [user_id+active]',
       days:           '[user_id+day_key], user_id, day_key',
-      notepad_pages:  'id, user_id, archived, updated_at',
+      notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
       settings:       'user_id',
       write_queue:    '++id, table, row_id, attempted_at',
     });

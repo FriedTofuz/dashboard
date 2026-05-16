@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Caveat, Kalam } from 'next/font/google';
 import './globals.css';
 import { WobbleDefs } from '@/components/ui/WobbleDefs';
+import { PwaRegistrar } from '@/components/system/PwaRegistrar';
 
 const caveat = Caveat({
   subsets: ['latin'],
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${caveat.variable} ${kalam.variable}`}>
       <body className="font-hand bg-paper text-ink min-h-screen">
         <WobbleDefs />
+        <PwaRegistrar />
         {children}
       </body>
     </html>

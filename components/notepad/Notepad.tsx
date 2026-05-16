@@ -1,29 +1,39 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { getDb } from '@/lib/idb/db';
+import { setDayNotes } from '@/lib/idb/days';
 import { cn } from '@/lib/utils';
 
 interface NotepadProps {
-  value: string;
-  onChange: (v: string) => void;
+  dayKey: string;
+  userId: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function Notepad({ value, onChange, className, style }: NotepadProps) {
-  const [local, setLocal] = useState(value);
+export function Notepad({ dayKey, userId, className, style }: NotepadProps) {
+  const day = useLiveQuery(() => getDb().days.get([userId, dayKey]), [userId, dayKey]);
+  const remoteValue = day?.notes ?? '';
+
+  const [local, setLocal] = useState(remoteValue);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
-    setLocal(value);
-  }, [value]);
+    if (!dirtyRef.current) setLocal(remoteValue);
+  }, [remoteValue]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const v = e.target.value;
     setLocal(v);
+    dirtyRef.current = true;
     clearTimeout(timerRef.current);
-    // Debounce: persist after 800 ms idle
-    timerRef.current = setTimeout(() => onChange(v), 800);
+    timerRef.current = setTimeout(() => {
+      void setDayNotes(userId, dayKey, v);
+      dirtyRef.current = false;
+    }, 800);
   }
 
   return (
@@ -32,7 +42,7 @@ export function Notepad({ value, onChange, className, style }: NotepadProps) {
         'paper ink-box-soft ruled-dense ruled-margin relative flex-1 min-h-0',
         className,
       )}
-      style={style}
+      style={style ?? { minHeight: 200 }}
     >
       <textarea
         value={local}
@@ -42,11 +52,8 @@ export function Notepad({ value, onChange, className, style }: NotepadProps) {
           'font-hand text-body bg-transparent w-full h-full resize-none border-none outline-none',
           'placeholder:text-ink-faint',
         )}
-        style={{
-          padding: '14px 18px 14px 70px',
-          lineHeight: '32px',
-        }}
-        aria-label="Scratch notepad"
+        style={{ padding: '14px 18px 14px 70px', lineHeight: '32px' }}
+        aria-label={`Scratch notepad for ${dayKey}`}
       />
     </div>
   );

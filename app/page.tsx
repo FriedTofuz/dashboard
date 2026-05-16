@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { DesktopDashboard } from '@/components/layout/DesktopDashboard';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -10,5 +10,5 @@ export default async function HomePage() {
 
   if (!user) redirect('/login');
 
-  return <DesktopDashboard userId={user.id} />;
+  return <DashboardShell userId={user.id} />;
 }

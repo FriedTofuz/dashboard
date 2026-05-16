@@ -1,6 +1,7 @@
 'use client';
 
 import { useLiveQuery } from 'dexie-react-hooks';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { getDb } from '@/lib/idb/db';
 import { TaskRow } from './TaskRow';
 import { todayKey } from '@/lib/time/dayKey';
@@ -30,20 +31,20 @@ export function TaskList({ dayKey = todayKey(), kind }: TaskListProps) {
 
   if (!tasks || tasks.length === 0) {
     if (kind === 'open') {
-      return (
-        <p className="muted caption px-2 py-3 italic">
-          — nothing else today —
-        </p>
-      );
+      return <p className="muted caption px-2 py-3 italic">— nothing else today —</p>;
     }
     return null;
   }
 
+  const ids = tasks.map((t) => `task-${t.id}`);
+
   return (
-    <div className="col gap-0">
-      {tasks.map((task, i) => (
-        <TaskRow key={task.id} task={task} index={i} showNumber={kind === 'open'} />
-      ))}
-    </div>
+    <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+      <div className="col gap-0">
+        {tasks.map((task, i) => (
+          <TaskRow key={task.id} task={task} index={i} showNumber={kind === 'open'} />
+        ))}
+      </div>
+    </SortableContext>
   );
 }
