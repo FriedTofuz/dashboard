@@ -11,8 +11,13 @@ jobs:
     steps:
       - name: Trigger Vercel deploy hook
         run: |
-          curl -fsSL -X POST "$VERCEL_DEPLOY_HOOK" \
+          echo "Calling Vercel deploy hook..."
+          # Print the project ID portion of the URL (safe to log)
+          echo "Hook host: $(echo "$VERCEL_DEPLOY_HOOK" | sed -E 's|https://([^/]+).*|\1|')"
+          echo "Hook path tail: $(echo "$VERCEL_DEPLOY_HOOK" | sed -E 's|.*/deploy/([^/?]+).*|\1|')"
+          response=$(curl -fsSL -X POST "$VERCEL_DEPLOY_HOOK" \
             -H "Content-Type: application/json" \
-            -d '{"ref":"${{ github.sha }}"}'
+            -d "{\"ref\":\"${{ github.sha }}\"}")
+          echo "Vercel response: $response"
         env:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
