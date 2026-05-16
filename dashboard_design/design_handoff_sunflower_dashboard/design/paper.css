@@ -1,0 +1,263 @@
+/* ============================================
+   Japanese notepaper / handdrawn wireframe styles
+   ============================================ */
+
+:root {
+  --paper: #F5EFE6;
+  --paper-warm: #EFE7DA;
+  --paper-shadow: #E6DCC9;
+  --ink: #2B2622;
+  --ink-soft: #4a423b;
+  --ink-faint: #8a8175;
+  --sage: #8a9a82;
+  --sage-deep: #6c7d65;
+  --sage-wash: #c8d2bf;
+  --terracotta: #c08775;
+  --terracotta-deep: #a06a58;
+  --terracotta-wash: #e6c9bd;
+  --rule: rgba(43, 38, 34, 0.10);
+  --rule-strong: rgba(43, 38, 34, 0.22);
+  --shadow: 0 1px 0 rgba(43,38,34,0.05), 0 8px 24px rgba(43,38,34,0.06);
+}
+
+/* ---------- typography ---------- */
+.hand    { font-family: 'Caveat', cursive; font-weight: 500; }
+.hand-b  { font-family: 'Caveat', cursive; font-weight: 700; }
+.print   { font-family: 'Kalam', cursive; font-weight: 400; }
+.mono    { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.04em; }
+.tiny    { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-family: 'Kalam', cursive; }
+
+/* ---------- paper surface ---------- */
+.paper {
+  background:
+    /* faint speckle noise */
+    radial-gradient(circle at 20% 30%, rgba(43,38,34,0.025) 0 1px, transparent 1px) 0 0/ 7px 7px,
+    radial-gradient(circle at 70% 60%, rgba(43,38,34,0.02)  0 1px, transparent 1px) 3px 5px/ 11px 11px,
+    var(--paper);
+  color: var(--ink);
+  position: relative;
+}
+.paper::before {
+  /* corner shadow / paper edge */
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at top left,    rgba(43,38,34,0.04), transparent 40%),
+    radial-gradient(ellipse at bottom right,rgba(43,38,34,0.05), transparent 45%);
+}
+
+/* ruled notebook lines */
+.ruled {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 31px,
+      var(--rule) 31px 32px
+    );
+}
+.ruled-dense {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 23px,
+      var(--rule) 23px 24px
+    );
+}
+.ruled-margin {
+  /* red margin line */
+  position: relative;
+}
+.ruled-margin::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: 56px;
+  width: 1px;
+  background: rgba(192,135,117,0.45);
+}
+
+/* dotted grid (for plant card) */
+.dotgrid {
+  background-image: radial-gradient(circle, rgba(43,38,34,0.13) 0.7px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* ---------- hand-drawn border (SVG filter) ---------- */
+.wobble { filter: url(#wobble); }
+
+.ink-box {
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  filter: url(#wobble);
+}
+.ink-box-soft {
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 6px;
+  filter: url(#wobble);
+}
+.ink-box-sage   { border: 1.6px solid var(--sage-deep);       border-radius: 4px; filter: url(#wobble); }
+.ink-box-terra  { border: 1.6px solid var(--terracotta-deep); border-radius: 4px; filter: url(#wobble); }
+.ink-box-dashed {
+  border: 1.5px dashed var(--ink-faint);
+  border-radius: 4px;
+  filter: url(#wobble);
+}
+.ink-box-double {
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--paper), 0 0 0 2.5px var(--ink);
+  filter: url(#wobble);
+}
+
+/* ---------- ink underline / strikethrough ---------- */
+/* Native line-through so multi-line wraps get a strike on each line
+   (custom ::after would only draw one line through the bounding box) */
+.strike {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink);
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0;
+}
+
+.underline-hand {
+  position: relative; display: inline-block;
+}
+.underline-hand::after {
+  content: '';
+  position: absolute; left: -2px; right: -2px; bottom: -4px;
+  height: 3px;
+  background: var(--terracotta);
+  border-radius: 2px;
+  filter: url(#wobble);
+  opacity: 0.7;
+}
+
+/* ---------- checkboxes (hand drawn) ---------- */
+.box {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 1.6px solid var(--ink);
+  border-radius: 3px;
+  filter: url(#wobble);
+  vertical-align: -3px;
+  position: relative;
+  flex-shrink: 0;
+}
+.box.checked::after {
+  content: '✓';
+  position: absolute; inset: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 20px; line-height: 16px;
+  color: var(--terracotta-deep);
+  text-align: center;
+  transform: rotate(-6deg);
+}
+.box.timer::after {
+  content: '';
+  position: absolute; inset: 3px;
+  background: var(--terracotta);
+  border-radius: 2px;
+  filter: url(#wobble);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 0.55; transform: scale(0.85); }
+  50%     { opacity: 1;    transform: scale(1); }
+}
+
+/* ---------- soft highlighter ---------- */
+.highlight-sage {
+  background: linear-gradient(180deg, transparent 8%, rgba(138,154,130,0.22) 8% 92%, transparent 92%);
+  padding: 2px 6px;
+}
+.highlight-terra {
+  background: linear-gradient(180deg, transparent 8%, rgba(192,135,117,0.20) 8% 92%, transparent 92%);
+  padding: 2px 6px;
+}
+.wash-sage  { background: rgba(138,154,130,0.14); }
+.wash-terra { background: rgba(192,135,117,0.14); }
+
+/* ---------- tape / sticker accents ---------- */
+.tape {
+  position: absolute;
+  width: 90px; height: 22px;
+  background: rgba(192,135,117,0.25);
+  border-left:  1px dashed rgba(192,135,117,0.5);
+  border-right: 1px dashed rgba(192,135,117,0.5);
+  transform: rotate(-3deg);
+  top: -10px; left: 24px;
+}
+
+/* ---------- progress bar (sketched) ---------- */
+.bar {
+  position: relative;
+  height: 14px;
+  border: 1.4px solid var(--ink);
+  border-radius: 8px;
+  filter: url(#wobble);
+  background: var(--paper);
+  overflow: hidden;
+}
+.bar > span {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--sage) 0 6px,
+    var(--sage-deep) 6px 7px
+  );
+  border-radius: 6px;
+}
+
+/* ---------- helpers ---------- */
+.col { display: flex; flex-direction: column; }
+.row { display: flex; flex-direction: row; }
+.center { display: flex; align-items: center; justify-content: center; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.gap-6 { gap: 24px; }
+.gap-8 { gap: 32px; }
+
+.muted { color: var(--ink-faint); }
+.soft  { color: var(--ink-soft); }
+
+/* number labels (e.g. "1.") */
+.num {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  width: 26px; text-align: right;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+/* artboard inner padding shorthand */
+.pad { padding: 28px 32px; }
+.pad-sm { padding: 18px 22px; }
+
+/* sunflower SVG — fills its container, pot sits on the bottom edge */
+.sunflower-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.sunflower-slot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* doodle arrow / annotation marker */
+.annot {
+  font-family: 'Caveat', cursive;
+  color: var(--terracotta-deep);
+  font-size: 18px;
+}
+
+/* artboard background — every artboard gets paper */
+[data-dc-artboard], .artboard { background: var(--paper); }

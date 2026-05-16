@@ -1,0 +1,15 @@
+# design files are large — ignore binary assets but keep the directory
+dashboard_design/**/*.png
+dashboard_design/**/*.jpg
+dashboard_design/**/*.jpeg
+dashboard_design/**/*.gif
+dashboard_design/**/*.webp
+dashboard_design/**/*.svg
+dashboard_design/**/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# env
+.env.local

@@ -1,0 +1,146 @@
+'use client';
+
+import { getDb, type Task } from './db';
+import { enqueue } from './queue';
+
+function now() { return Date.now(); }
+function newId() { return crypto.randomUUID(); }
+
+// ── Create / update ───────────────────────────────────────────────────────
+
+export async function createTask(
+  data: Omit<Task, 'id' | 'user_id' | 'created_at' | 'updated_at'>,
+  userId: string,
+): Promise<string> {
+  const id = newId();
+  const ts = now();
+  const task: Task = { ...data, id, user_id: userId, created_at: ts, updated_at: ts };
+  await getDb().tasks.add(task);
+  enqueue('upsert', 'tasks', id, taskToRemote(task));
+  return id;
+}
+
+export async function updateTask(id: string, changes: Partial<Task>): Promise<void> {
+  const ts = now();
+  await getDb().tasks.update(id, { ...changes, updated_at: ts });
+  const updated = await getDb().tasks.get(id);
+  if (updated) enqueue('upsert', 'tasks', id, taskToRemote(updated));
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await getDb().tasks.delete(id);
+  enqueue('delete', 'tasks', id, null);
+}
+
+// ── Status transitions ────────────────────────────────────────────────────
+
+/** Start the timer on a task. Pauses any currently-running task first. */
+export async function startTimer(taskId: string): Promise<void> {
+  const db = getDb();
+  const ts = now();
+
+  // Pause any currently running task (atomic-ish: Dexie transactions are serial)
+  await db.transaction('rw', db.tasks, async () => {
+    const running = await db.tasks.where('state').equals('running').first();
+    if (running && running.id !== taskId) {
+      const elapsed = running.elapsed_ms + (running.started_at ? ts - running.started_at : 0);
+      await db.tasks.update(running.id, {
+        state: 'paused',
+        started_at: null,
+        elapsed_ms: elapsed,
+        updated_at: ts,
+      });
+      enqueue('upsert', 'tasks', running.id, taskToRemote({ ...running, state: 'paused', elapsed_ms: elapsed }));
+    }
+    await db.tasks.update(taskId, {
+      state: 'running',
+      started_at: ts,
+      updated_at: ts,
+    });
+  });
+  const updated = await db.tasks.get(taskId);
+  if (updated) enqueue('upsert', 'tasks', taskId, taskToRemote(updated));
+}
+
+export async function pauseTimer(taskId: string): Promise<void> {
+  const ts = now();
+  const task = await getDb().tasks.get(taskId);
+  if (!task || task.state !== 'running') return;
+
+  const elapsed = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
+  await updateTask(taskId, { state: 'paused', started_at: null, elapsed_ms: elapsed });
+}
+
+export async function completeTask(taskId: string, note?: string): Promise<void> {
+  const ts = now();
+  const task = await getDb().tasks.get(taskId);
+  if (!task) return;
+
+  const actualMs = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
+
+  await updateTask(taskId, {
+    state: 'done',
+    started_at: null,
+    elapsed_ms: actualMs,
+    actual_ms: actualMs,
+    completed_at: ts,
+    completion_note: note,
+  });
+}
+
+export async function uncompleteTask(taskId: string): Promise<void> {
+  await updateTask(taskId, {
+    state: 'open',
+    actual_ms: null,
+    completed_at: null,
+    completion_note: undefined,
+    elapsed_ms: 0,
+  });
+}
+
+export async function setR3Slot(taskId: string, slot: 1 | 2 | 3 | null, dayKey: string): Promise<void> {
+  const db = getDb();
+  await db.transaction('rw', db.tasks, async () => {
+    // Clear slot if another task is there
+    if (slot !== null) {
+      const occupant = await db.tasks
+        .where('[user_id+day_key]')
+        .between(['', dayKey], ['￿', dayKey])
+        .filter(t => t.r3_slot === slot && t.id !== taskId)
+        .first();
+      if (occupant) {
+        await db.tasks.update(occupant.id, { r3_slot: null, updated_at: now() });
+        enqueue('upsert', 'tasks', occupant.id, taskToRemote({ ...occupant, r3_slot: null }));
+      }
+    }
+    await db.tasks.update(taskId, { r3_slot: slot, updated_at: now() });
+  });
+  const updated = await db.tasks.get(taskId);
+  if (updated) enqueue('upsert', 'tasks', taskId, taskToRemote(updated));
+}
+
+// ── Serialization ─────────────────────────────────────────────────────────
+
+function taskToRemote(t: Task): Record<string, unknown> {
+  return {
+    id:              t.id,
+    user_id:         t.user_id,
+    day_key:         t.day_key,
+    template_id:     t.template_id,
+    title:           t.title,
+    description:     t.description ?? null,
+    est_minutes:     t.est_minutes,
+    state:           t.state,
+    started_at:      t.started_at ? new Date(t.started_at).toISOString() : null,
+    elapsed_ms:      t.elapsed_ms,
+    actual_ms:       t.actual_ms,
+    completed_at:    t.completed_at ? new Date(t.completed_at).toISOString() : null,
+    completion_note: t.completion_note ?? null,
+    r3_slot:         t.r3_slot,
+    sort_order:      t.sort_order,
+    skipped:         t.skipped,
+    archived:        t.archived,
+    created_at:      new Date(t.created_at).toISOString(),
+    updated_at:      new Date(t.updated_at).toISOString(),
+  };
+}
