@@ -1,11 +1,13 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -14,33 +16,17 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithOtp({
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      password,
     });
     setLoading(false);
-    if (authError) setError(authError.message);
-    else setSent(true);
-  }
-
-  if (sent) {
-    return (
-      <div className="min-h-screen center paper">
-        <div className="ink-box-soft col gap-4 p-8" style={{ maxWidth: 360 }}>
-          <h1 className="font-hand text-h2">check your email</h1>
-          <p className="font-hand text-body muted">
-            a magic link is on its way to <strong>{email}</strong>. click it to sign in.
-          </p>
-          <button
-            type="button"
-            onClick={() => setSent(false)}
-            className="tiny hover:text-ink transition-colors"
-          >
-            use a different email
-          </button>
-        </div>
-      </div>
-    );
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+    router.push('/');
+    router.refresh();
   }
 
   return (
@@ -67,7 +53,22 @@ export default function LoginPage() {
             placeholder="your@email.com"
             required
             autoFocus
+            autoComplete="email"
             className="font-hand text-body bg-transparent border-b py-1 focus:outline-none placeholder:text-ink-faint"
+            style={{ borderColor: 'var(--ink-faint)' }}
+          />
+        </div>
+
+        <div className="col gap-2">
+          <label className="tiny" htmlFor="password">password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            className="font-hand text-body bg-transparent border-b py-1 focus:outline-none"
             style={{ borderColor: 'var(--ink-faint)' }}
           />
         </div>
@@ -79,7 +80,7 @@ export default function LoginPage() {
           disabled={loading}
           className="ink-box font-hand text-body px-6 py-2 hover:wash-sage transition-colors disabled:opacity-50"
         >
-          {loading ? 'sending…' : 'send magic link'}
+          {loading ? 'signing in…' : 'sign in'}
         </button>
       </form>
     </div>
