@@ -29,6 +29,9 @@ interface UiState {
   labelsManagerOpen: boolean;
   setLabelsManagerOpen: (open: boolean) => void;
 
+  quotesManagerOpen: boolean;
+  setQuotesManagerOpen: (open: boolean) => void;
+
   /** Day-view filter: when set, only tasks with this label show in TaskList. */
   dayLabelFilter: string | null;
   setDayLabelFilter: (id: string | null) => void;
@@ -73,6 +76,9 @@ export const useUiStore = create<UiState>()((set) => ({
 
   labelsManagerOpen: false,
   setLabelsManagerOpen: (open) => set({ labelsManagerOpen: open }),
+
+  quotesManagerOpen: false,
+  setQuotesManagerOpen: (open) => set({ quotesManagerOpen: open }),
 
   dayLabelFilter: null,
   setDayLabelFilter: (id) => set({ dayLabelFilter: id }),

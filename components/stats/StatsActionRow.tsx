@@ -1,17 +1,24 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useUiStore } from '@/lib/store/useUiStore';
 
 interface StatsActionRowProps {
   /** Penzu URL (overridable for testing). */
   journalUrl?: string;
+  /** Whether to show the Calendar button. Hidden on mobile per spec. */
+  showCalendar?: boolean;
 }
 
 /** Four equal-width buttons that sit above the StatsCard.
- *  Slots: Journal · Scratch · (reserved) · (reserved) */
+ *
+ *  Desktop slots: Calendar · Scratch · Journal · (reserved)
+ *  Mobile slots:  Scratch · Journal · (reserved) · (reserved) */
 export function StatsActionRow({
   journalUrl = 'https://penzu.com',
+  showCalendar = true,
 }: StatsActionRowProps) {
+  const router = useRouter();
   const setScratchOpen = useUiStore((s) => s.setScratchOpen);
 
   return (
@@ -23,17 +30,25 @@ export function StatsActionRow({
         gap: 12,
       }}
     >
-      <ActionButton
-        label="Journal"
-        onClick={() => window.open(journalUrl, '_blank', 'noopener,noreferrer')}
-        aria-label="Open daily journal"
-      />
+      {showCalendar ? (
+        <ActionButton
+          label="Calendar"
+          onClick={() => router.push('/calendar')}
+          aria-label="Open calendar"
+        />
+      ) : (
+        <ActionButton placeholder />
+      )}
       <ActionButton
         label="Scratch"
         onClick={() => setScratchOpen(true)}
         aria-label="Open scratch notes"
       />
-      <ActionButton placeholder />
+      <ActionButton
+        label="Journal"
+        onClick={() => window.open(journalUrl, '_blank', 'noopener,noreferrer')}
+        aria-label="Open daily journal"
+      />
       <ActionButton placeholder />
     </div>
   );
