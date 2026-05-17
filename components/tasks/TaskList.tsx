@@ -40,9 +40,8 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
     [],
   );
 
-  // Carry-over: unfinished tasks from prior days. Limited to the today view so
-  // historical day views still show only that day's own tasks. Skipped tasks
-  // are excluded — the user has already said "not today" by skipping.
+  // Carry-over: unfinished, non-skipped tasks from prior days. Limited to the
+  // today view so historical day views still show only that day's own tasks.
   const carryover = useLiveQuery<Task[], Task[]>(
     () =>
       isViewingToday
@@ -85,8 +84,8 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
     return (carryover ?? []).filter((t) => matchIds.has(t.id));
   }, [carryover, taskLabels, dayLabelFilter]);
 
-  // Make the whole container droppable as `day-<key>` so R3 cards can be
-  // demoted by dropping into the Tasks region — even when empty.
+  // Whole container is droppable as `day-<key>` so R3 cards can be demoted by
+  // dropping into the Tasks region — even when empty.
   const droppable = useDroppable({ id: `day-${dayKey}` });
 
   const sortedToday = filteredTasks.slice().sort((a, b) => {
@@ -98,8 +97,6 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
     return a.sort_order - b.sort_order;
   });
 
-  // Carry-over sorted by oldest day first, then sort_order. day_key is
-  // guaranteed non-null because the query filtered with `.below(dayKey)`.
   const sortedCarryover = filteredCarryover.slice().sort((a, b) => {
     const ak = a.day_key ?? '';
     const bk = b.day_key ?? '';
@@ -108,92 +105,91 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
   });
 
   const hasContent = sortedCarryover.length > 0 || sortedToday.length > 0;
-
-  // ── Empty state — droppable target with dashed sage border ─────────────
-  if (!hasContent) {
-    return (
-      <div
-        ref={droppable.setNodeRef}
-        className={cn('col transition-colors')}
-        style={{
-          gap: 6,
-          border: droppable.isOver
-            ? '1.6px solid var(--sage-deep)'
-            : '1.6px dashed var(--sage-deep)',
-          borderRadius: 6,
-          padding: '22px 18px',
-          background: droppable.isOver ? 'var(--sage-tint)' : 'transparent',
-          minHeight: 96,
-          textAlign: 'center',
-        }}
-      >
-        <span
-          className="hand"
-          style={{
-            fontSize: 22,
-            fontWeight: 500,
-            color: 'var(--terra-deep)',
-            display: 'block',
-            marginBottom: 2,
-          }}
-        >
-          {dayLabelFilter ? 'nothing tagged here yet' : 'all clear ✿'}
-        </span>
-        {(droppable.isOver || dayLabelFilter) && (
-          <span
-            className="ui"
-            style={{ fontSize: 13, color: 'var(--ink-faint)', display: 'block' }}
-          >
-            {droppable.isOver
-              ? 'drop here to move out of rule of 3'
-              : 'no tasks match this label — clear the filter to see everything'}
-          </span>
-        )}
-        {showAddRow && !dayLabelFilter && (
-          <div style={{ marginTop: 10 }}>
-            <AddTaskGhostRow />
-          </div>
-        )}
-      </div>
-    );
-  }
-
   const ids = sortedToday.map((t) => `task-${t.id}`);
 
   return (
     <div
       ref={droppable.setNodeRef}
-      className={cn('transition-colors')}
+      className={cn('paper wobble transition-colors')}
       style={{
+        border: '1.5px solid var(--sage-deep)',
         borderRadius: 6,
-        outline: droppable.isOver ? '1.6px solid var(--sage-deep)' : '1.6px solid transparent',
-        outlineOffset: 2,
-        background: droppable.isOver ? 'var(--sage-tint)' : 'transparent',
-        padding: droppable.isOver ? 6 : 0,
+        padding: '14px 22px',
+        background: droppable.isOver ? 'var(--sage-tint)' : 'var(--sage-tint)',
+        position: 'relative',
+        minHeight: hasContent ? undefined : 110,
       }}
     >
-      <div className="col" style={{ gap: 6 }}>
-        {sortedCarryover.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            showNumber={false}
-            draggable={false}
-            carryover
-          />
-        ))}
-        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          {sortedToday.map((task, i) => (
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 8,
+          bottom: 8,
+          left: 0,
+          width: 3,
+          background: 'var(--sage)',
+          borderRadius: 2,
+          opacity: 0.7,
+        }}
+      />
+
+      {!hasContent ? (
+        <div
+          className="col"
+          style={{ gap: 6, textAlign: 'center', padding: '12px 0 4px' }}
+        >
+          <span
+            className="hand"
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              color: 'var(--terra-deep)',
+              display: 'block',
+            }}
+          >
+            {dayLabelFilter ? 'nothing tagged here yet' : 'all clear ✿'}
+          </span>
+          {(droppable.isOver || dayLabelFilter) && (
+            <span
+              className="ui"
+              style={{ fontSize: 13, color: 'var(--ink-faint)', display: 'block' }}
+            >
+              {droppable.isOver
+                ? 'drop here to move out of rule of 3'
+                : 'no tasks match this label — clear the filter to see everything'}
+            </span>
+          )}
+          {showAddRow && !dayLabelFilter && (
+            <div style={{ marginTop: 8 }}>
+              <AddTaskGhostRow />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="col" style={{ gap: 6 }}>
+          {sortedCarryover.map((task) => (
             <TaskRow
               key={task.id}
               task={task}
-              index={i}
-              showNumber={task.state !== 'done'}
+              showNumber={false}
+              draggable={false}
+              carryover
             />
           ))}
-        </SortableContext>
-        {showAddRow && <AddTaskGhostRow />}
-      </div>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+            {sortedToday.map((task, i) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                index={i}
+                showNumber={task.state !== 'done'}
+              />
+            ))}
+          </SortableContext>
+          {showAddRow && <AddTaskGhostRow />}
+        </div>
+      )}
     </div>
   );
 }

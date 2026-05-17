@@ -10,13 +10,14 @@ export function AddTaskGhostRow() {
     <button
       type="button"
       onClick={() => openEditor()}
-      className="flex items-center gap-3 py-1 hover:opacity-100 transition-opacity"
+      className="flex items-center gap-3 hover:opacity-100 transition-opacity"
       style={{
-        opacity: 0.5,
-        minHeight: 32,
-        background: 'transparent',
-        border: 'none',
-        padding: '4px 0',
+        opacity: 0.7,
+        minHeight: 36,
+        background: 'var(--paper-warm)',
+        border: '1px dashed var(--ink-faint)',
+        borderRadius: 6,
+        padding: '6px 12px',
         cursor: 'pointer',
         textAlign: 'left',
         width: '100%',

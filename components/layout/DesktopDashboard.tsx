@@ -82,10 +82,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
                 <RuleOf3Row dayKey={currentDayKey} />
 
                 <div className="col" style={{ gap: 10 }}>
-                  <div className="row items-center justify-between" style={{ gap: 12 }}>
-                    <p className="section-head muted">Tasks</p>
-                    <DayLabelFilter userId={userId} />
-                  </div>
+                  <DayLabelFilter userId={userId} />
                   <TaskList dayKey={currentDayKey} showAddRow />
                 </div>
 
