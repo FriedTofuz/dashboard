@@ -5,6 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { getDb, type HabitTemplate } from '@/lib/idb/db';
 import { createHabit, updateHabit, deleteHabit } from '@/lib/idb/habits';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
+import { toast } from '@/lib/store/useToastStore';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -68,8 +70,16 @@ export function HabitTemplatesEditor({ userId }: Props) {
 
   async function remove() {
     if (!editing || isNew) return;
-    if (!confirm(`Delete habit "${editing.title}"? Past instances stay.`)) return;
+    const ok = await themedConfirm({
+      title: `delete habit "${editing.title}"?`,
+      body: 'past instances stay; no new ones will be generated.',
+      confirmLabel: 'delete habit',
+      cancelLabel: 'keep it',
+      danger: true,
+    });
+    if (!ok) return;
     await deleteHabit(editing.id);
+    toast(`habit "${editing.title}" deleted`);
     setEditing(null);
   }
 

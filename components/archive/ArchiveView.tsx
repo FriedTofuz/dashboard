@@ -2,8 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { getDb } from '@/lib/idb/db';
+import { getDb, type Task } from '@/lib/idb/db';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
+import { toast } from '@/lib/store/useToastStore';
+import { deleteTask, createTask } from '@/lib/idb/tasks';
 import { cn } from '@/lib/utils';
 import { formatDayLabel } from '@/lib/time/dayKey';
 
@@ -11,56 +14,96 @@ interface Props {
   userId: string;
 }
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function dayKeyToYearMonth(key: string | null | undefined): { year: number; month: number } | null {
+  if (!key) return null;
+  const m = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+}
+
 export function ArchiveView({ userId }: Props) {
   const [q, setQ] = useState('');
+  const [filterYear, setFilterYear] = useState<number | 'all'>('all');
+  const [filterMonth, setFilterMonth] = useState<number | 'all'>('all');
   const setView = useUiStore((s) => s.setView);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
+  const openEditor = useUiStore((s) => s.openEditor);
 
   const allTasks = useLiveQuery(
-    () =>
-      getDb()
-        .tasks.where('user_id')
-        .equals(userId)
-        .toArray(),
+    () => getDb().tasks.where('user_id').equals(userId).toArray(),
     [userId],
     [],
   );
 
   const pages = useLiveQuery(
-    () =>
-      getDb()
-        .notepad_pages.where('user_id')
-        .equals(userId)
-        .toArray(),
+    () => getDb().notepad_pages.where('user_id').equals(userId).toArray(),
     [userId],
     [],
   );
 
   const days = useLiveQuery(
-    () =>
-      getDb()
-        .days.where('user_id')
-        .equals(userId)
-        .toArray(),
+    () => getDb().days.where('user_id').equals(userId).toArray(),
     [userId],
     [],
   );
 
   const ql = q.toLowerCase().trim();
 
-  const matchingTasks = useMemo(() => {
-    if (ql.length === 0) {
-      return (allTasks ?? []).filter((t) => t.state === 'done').slice(0, 50);
+  // Build year/month lists from tasks for the dropdowns
+  const { years, monthsForYear } = useMemo(() => {
+    const ys = new Set<number>();
+    const ymMap = new Map<number, Set<number>>();
+    for (const t of allTasks ?? []) {
+      const ym = dayKeyToYearMonth(t.day_key);
+      if (!ym) continue;
+      ys.add(ym.year);
+      let mSet = ymMap.get(ym.year);
+      if (!mSet) { mSet = new Set(); ymMap.set(ym.year, mSet); }
+      mSet.add(ym.month);
     }
-    return (allTasks ?? [])
+    return {
+      years: Array.from(ys).sort((a, b) => b - a),
+      monthsForYear: (y: number | 'all'): number[] => {
+        if (y === 'all') {
+          const all = new Set<number>();
+          ymMap.forEach((months) => months.forEach((m) => all.add(m)));
+          return Array.from(all).sort((a, b) => a - b);
+        }
+        return Array.from(ymMap.get(y) ?? []).sort((a, b) => a - b);
+      },
+    };
+  }, [allTasks]);
+
+  // Filter tasks by year/month + search query
+  const matchingTasks = useMemo(() => {
+    const list = (allTasks ?? []).filter((t) => {
+      const ym = dayKeyToYearMonth(t.day_key);
+      if (filterYear !== 'all' && (!ym || ym.year !== filterYear)) return false;
+      if (filterMonth !== 'all' && (!ym || ym.month !== filterMonth)) return false;
+      return true;
+    });
+
+    if (ql.length === 0) {
+      // When no search, prioritize done tasks but include all matching the filter.
+      const filtered = list.filter((t) =>
+        filterYear !== 'all' || filterMonth !== 'all' ? !t.archived : t.state === 'done',
+      );
+      return filtered.slice(0, filterYear !== 'all' || filterMonth !== 'all' ? 200 : 50);
+    }
+    return list
       .filter(
         (t) =>
           t.title.toLowerCase().includes(ql) ||
           (t.description ?? '').toLowerCase().includes(ql) ||
           (t.completion_note ?? '').toLowerCase().includes(ql),
       )
-      .slice(0, 100);
-  }, [allTasks, ql]);
+      .slice(0, 200);
+  }, [allTasks, ql, filterYear, filterMonth]);
 
   const matchingPages = useMemo(
     () =>
@@ -77,16 +120,59 @@ export function ArchiveView({ userId }: Props) {
     return (days ?? []).filter((d) => d.notes.toLowerCase().includes(ql));
   }, [days, ql]);
 
+  const noFilter = ql.length === 0 && filterYear === 'all' && filterMonth === 'all';
   const isEmpty =
-    ql.length === 0 &&
+    noFilter &&
     matchingTasks.length === 0 &&
     matchingPages.length === 0 &&
     (days ?? []).length === 0;
 
+  async function handleDeleteTask(task: Task) {
+    const ok = await themedConfirm({
+      title: `delete "${task.title}"?`,
+      body: 'this removes the task from history. it can\'t be undone.',
+      confirmLabel: 'delete',
+      cancelLabel: 'keep it',
+      danger: true,
+    });
+    if (!ok) return;
+    const snap = { ...task };
+    await deleteTask(task.id);
+    toast(`deleted "${task.title}"`, {
+      action: {
+        label: 'undo',
+        onAction: () => {
+          void createTask(
+            {
+              day_key: snap.day_key,
+              template_id: snap.template_id,
+              title: snap.title,
+              description: snap.description,
+              est_minutes: snap.est_minutes,
+              state: snap.state,
+              started_at: null,
+              elapsed_ms: snap.elapsed_ms,
+              actual_ms: snap.actual_ms,
+              completed_at: snap.completed_at,
+              completion_note: snap.completion_note,
+              r3_slot: snap.r3_slot,
+              sort_order: snap.sort_order,
+              skipped: snap.skipped,
+              archived: snap.archived,
+            },
+            snap.user_id,
+          );
+        },
+      },
+    });
+  }
+
+  const monthOptions = monthsForYear(filterYear);
+
   return (
     <div
       className="col"
-      style={{ gap: 24, maxWidth: 800, margin: '0 auto', width: '100%' }}
+      style={{ gap: 20, maxWidth: 800, margin: '0 auto', width: '100%' }}
     >
       <div className="row items-center justify-between">
         <h2
@@ -116,22 +202,67 @@ export function ArchiveView({ userId }: Props) {
         </button>
       </div>
 
-      <input
-        type="text"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="search tasks, notes, pages…"
-        className="hand bg-transparent"
-        style={{
-          fontSize: 20,
-          fontWeight: 500,
-          borderBottom: '1px solid var(--ink-faint)',
-          padding: '8px 2px',
-          outline: 'none',
-          color: 'var(--ink)',
-        }}
-        autoFocus
-      />
+      <div className="col" style={{ gap: 10 }}>
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="search tasks, notes, pages…"
+          className="hand bg-transparent"
+          style={{
+            fontSize: 20,
+            fontWeight: 500,
+            borderBottom: '1px solid var(--ink-faint)',
+            padding: '8px 2px',
+            outline: 'none',
+            color: 'var(--ink)',
+          }}
+          autoFocus
+        />
+
+        <div className="row items-center" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <span className="tiny" style={{ letterSpacing: '0.14em' }}>filter</span>
+          <FilterDropdown
+            label="year"
+            value={filterYear === 'all' ? 'all' : String(filterYear)}
+            onChange={(v) => {
+              setFilterYear(v === 'all' ? 'all' : parseInt(v, 10));
+              setFilterMonth('all');
+            }}
+            options={[
+              { value: 'all', label: 'all years' },
+              ...years.map((y) => ({ value: String(y), label: String(y) })),
+            ]}
+          />
+          <FilterDropdown
+            label="month"
+            value={filterMonth === 'all' ? 'all' : String(filterMonth)}
+            onChange={(v) => setFilterMonth(v === 'all' ? 'all' : parseInt(v, 10))}
+            options={[
+              { value: 'all', label: 'all months' },
+              ...monthOptions.map((m) => ({ value: String(m), label: MONTH_NAMES[m - 1] })),
+            ]}
+          />
+          {(filterYear !== 'all' || filterMonth !== 'all') && (
+            <button
+              type="button"
+              onClick={() => { setFilterYear('all'); setFilterMonth('all'); }}
+              className="ui hover:bg-paper-warm transition-colors"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--ink-faint)',
+                padding: '6px 10px',
+                fontSize: 12,
+                cursor: 'pointer',
+                borderRadius: 4,
+              }}
+            >
+              clear filter
+            </button>
+          )}
+        </div>
+      </div>
 
       {isEmpty ? (
         <div className="empty-state">
@@ -204,7 +335,11 @@ export function ArchiveView({ userId }: Props) {
 
           <div className="col" style={{ gap: 4 }}>
             <p className="section-head sage">
-              {ql.length === 0 ? 'Recent completions' : `Tasks (${matchingTasks.length})`}
+              {ql.length === 0
+                ? filterYear === 'all' && filterMonth === 'all'
+                  ? 'Recent completions'
+                  : `Tasks (${matchingTasks.length})`
+                : `Tasks (${matchingTasks.length})`}
             </p>
             {matchingTasks.length === 0 && (
               <p className="hand muted" style={{ fontSize: 17, fontStyle: 'italic' }}>
@@ -217,40 +352,150 @@ export function ArchiveView({ userId }: Props) {
                   (b.completed_at ?? b.updated_at) - (a.completed_at ?? a.updated_at),
               )
               .map((t) => (
-                <button
+                <ArchiveTaskRow
                   key={t.id}
-                  type="button"
-                  onClick={() => {
+                  task={t}
+                  onOpen={() => {
                     if (t.day_key) {
                       setCurrentDayKey(t.day_key);
                       setView('today');
                     }
                   }}
-                  className="row items-center justify-between hover:bg-paper-warm transition-colors"
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: 5,
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span
-                    className={cn(
-                      'hand',
-                      t.state === 'done' && 'strike opacity-80',
-                    )}
-                    style={{ fontSize: 20 }}
-                  >
-                    {t.title}
-                  </span>
-                  <span className="tiny num">{t.day_key ?? 'backlog'}</span>
-                </button>
+                  onEdit={() => openEditor(t.id)}
+                  onDelete={() => handleDeleteTask(t)}
+                />
               ))}
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ── Filter dropdown ────────────────────────────────────────────────────
+
+interface FilterDropdownProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}
+
+function FilterDropdown({ label, value, onChange, options }: FilterDropdownProps) {
+  return (
+    <label className="row items-center" style={{ gap: 6 }}>
+      <span className="ui muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="ui wobble"
+        style={{
+          border: '1.5px solid var(--ink-soft)',
+          borderRadius: 5,
+          padding: '6px 10px',
+          background: 'var(--paper)',
+          color: 'var(--ink)',
+          fontSize: 13,
+          fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+          cursor: 'pointer',
+          outline: 'none',
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+// ── Archive task row ───────────────────────────────────────────────────
+
+interface ArchiveTaskRowProps {
+  task: Task;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function ArchiveTaskRow({ task, onOpen, onEdit, onDelete }: ArchiveTaskRowProps) {
+  return (
+    <div
+      className="row items-center group hover:bg-paper-warm transition-colors"
+      style={{
+        padding: '6px 10px',
+        borderRadius: 5,
+        gap: 8,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="row items-center justify-between flex-1 min-w-0"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          textAlign: 'left',
+          gap: 12,
+        }}
+      >
+        <span
+          className={cn('hand', task.state === 'done' && 'strike opacity-80')}
+          style={{ fontSize: 20, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >
+          {task.title}
+        </span>
+        <span className="tiny num" style={{ flexShrink: 0 }}>
+          {task.day_key ?? 'backlog'}
+        </span>
+      </button>
+      <div
+        className="row opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+        style={{ gap: 2, flexShrink: 0 }}
+      >
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label="Edit task"
+          title="Edit"
+          className="hover:bg-paper-warm transition-colors"
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--ink-faint)',
+            fontSize: 14,
+            padding: 4,
+            borderRadius: 3,
+            cursor: 'pointer',
+            lineHeight: 1,
+          }}
+        >
+          ✎
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Delete task"
+          title="Delete"
+          className="hover:bg-paper-warm transition-colors"
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--terra-deep)',
+            fontSize: 14,
+            padding: 4,
+            borderRadius: 3,
+            cursor: 'pointer',
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }

@@ -84,7 +84,7 @@ export function TopBar() {
           disabled={currentDayKey === today}
           className="wobble transition-colors hover:bg-paper-warm disabled:opacity-50"
           style={{
-            fontFamily: 'var(--font-caveat), cursive',
+            fontFamily: 'var(--font-hand), cursive',
             fontWeight: 600,
             fontSize: 17,
             color: 'var(--ink-faint)',

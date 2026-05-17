@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from 'next';
-import { Caveat, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Shantell_Sans, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { WobbleDefs } from '@/components/ui/WobbleDefs';
 import { PwaRegistrar } from '@/components/system/PwaRegistrar';
 import { ThemeBoot } from '@/components/system/ThemeBoot';
+import { ToastHost } from '@/components/system/ToastHost';
 
-const caveat = Caveat({
+// Shantell Sans replaces Caveat for the "user voice" / handwritten role.
+// Multi-weight variable font (300–800) — we use 400/500/600/700.
+const handwriting = Shantell_Sans({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  variable: '--font-caveat',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-hand',
   display: 'swap',
 });
 
@@ -47,13 +50,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${caveat.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+      className={`${handwriting.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
     >
       <body className="bg-paper text-ink min-h-screen">
         <ThemeBoot />
         <WobbleDefs />
         <PwaRegistrar />
         {children}
+        <ToastHost />
       </body>
     </html>
   );

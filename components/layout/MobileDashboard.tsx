@@ -10,6 +10,7 @@ import { CompletionPrompt } from '@/components/tasks/CompletionPrompt';
 import { HabitsSection } from '@/components/tasks/HabitsSection';
 import { HabitTemplatesEditor } from '@/components/tasks/HabitTemplatesEditor';
 import { NotepadArchiveModal } from '@/components/notepad/NotepadArchiveModal';
+import { ConfirmDialog } from '@/components/system/ConfirmDialog';
 import { ProgressCard } from '@/components/stats/ProgressCard';
 import { StatsCard } from '@/components/stats/StatsCard';
 import { FlowerCard } from '@/components/sunflower/FlowerCard';
@@ -140,7 +141,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               border: '1.5px solid var(--ink)',
               borderRadius: '999px',
               padding: '14px 20px',
-              fontFamily: 'var(--font-caveat), cursive',
+              fontFamily: 'var(--font-hand), cursive',
               fontWeight: 700,
               fontSize: 26,
               boxShadow: 'var(--shadow)',
@@ -227,6 +228,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <HabitTemplatesEditor userId={userId} />
       <CompletionPrompt />
       <NotepadArchiveModal userId={userId} />
+      <ConfirmDialog />
       <CommandPalette userId={userId} />
       <InstallPrompt />
     </div>

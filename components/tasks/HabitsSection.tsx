@@ -22,8 +22,8 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
   );
 
   return (
-    <div className="col" style={{ gap: 18 }}>
-      <p className="section-head terra">
+    <div className="col habits-section" style={{ gap: 18 }}>
+      <p className="section-head ochre">
         Daily habits
         <span className="sub">— quiet, repeating</span>
       </p>
@@ -35,15 +35,33 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
         </div>
       ) : (
         <div
-          className="paper ruled wobble"
+          className="paper wobble"
           style={{
-            border: '1.5px solid var(--ink-soft)',
+            border: '1.5px solid var(--ochre-deep)',
             borderRadius: 6,
             padding: '14px 22px',
+            background:
+              'linear-gradient(0deg, var(--ochre-tint), var(--ochre-tint)), var(--paper)',
             backgroundImage:
               'repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px)',
+            position: 'relative',
           }}
         >
+          {/* Left ochre rail to echo the R3 "everything green" accent */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 8,
+              bottom: 8,
+              left: 0,
+              width: 3,
+              background: 'var(--ochre)',
+              borderRadius: 2,
+              opacity: 0.7,
+            }}
+          />
+
           <SortableContext
             items={habits.map((h) => `task-${h.id}`)}
             strategy={verticalListSortingStrategy}

@@ -50,9 +50,12 @@ export async function GET(request: Request) {
       await webpush.sendNotification(
         sub,
         JSON.stringify({
-          title: 'Sunflower',
-          body: 'check in on your day · 1 priority left?',
+          title: '✿ Sunflower',
+          body: 'water me — what are today\'s three?',
           url: '/',
+          icon: '/icons/icon-192.svg',
+          badge: '/icons/icon-192.svg',
+          tag: 'sunflower-daily',
         }),
       );
       sent++;
