@@ -32,11 +32,6 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
 
   return (
     <div className="col habits-section" style={{ gap: 18 }}>
-      <p className="section-head ochre">
-        Daily habits
-        <span className="sub">— quiet, repeating</span>
-      </p>
-
       {!habits || habits.length === 0 ? (
         <div className="empty-state">
           <span className="headline">no habits yet</span>
@@ -49,10 +44,7 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
             border: '1.5px solid var(--ochre-deep)',
             borderRadius: 6,
             padding: '14px 22px',
-            background:
-              'linear-gradient(0deg, var(--ochre-tint), var(--ochre-tint)), var(--paper)',
-            backgroundImage:
-              'repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px)',
+            background: 'var(--ochre-tint)',
             position: 'relative',
           }}
         >

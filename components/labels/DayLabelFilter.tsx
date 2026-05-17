@@ -22,24 +22,9 @@ export function DayLabelFilter({ userId }: Props) {
   const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
 
   if (!labels || labels.length === 0) {
-    return (
-      <button
-        type="button"
-        onClick={() => setLabelsManagerOpen(true)}
-        className="ui muted hover:bg-paper-warm transition-colors"
-        style={{
-          background: 'transparent',
-          border: '1px dashed var(--ink-faint)',
-          borderRadius: 4,
-          padding: '2px 8px',
-          fontSize: 11,
-          cursor: 'pointer',
-          alignSelf: 'flex-start',
-        }}
-      >
-        + add labels
-      </button>
-    );
+    // The "+ add labels" entry point lives in the footer; render nothing here
+    // until the user has at least one label to filter by.
+    return null;
   }
 
   return (

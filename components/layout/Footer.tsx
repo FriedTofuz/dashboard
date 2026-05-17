@@ -37,6 +37,7 @@ const kbdStyle: React.CSSProperties = {
 export function Footer() {
   const openEditor = useUiStore((s) => s.openEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
+  const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
   const setView = useUiStore((s) => s.setView);
   const view = useUiStore((s) => s.view);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
@@ -71,6 +72,14 @@ export function Footer() {
           style={btnStyle}
         >
           habits
+        </button>
+        <button
+          type="button"
+          onClick={() => setLabelsManagerOpen(true)}
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={btnStyle}
+        >
+          + add labels
         </button>
         <button
           type="button"

@@ -169,7 +169,7 @@ export function ScratchModal({ dayKey, userId }: ScratchModalProps) {
         <textarea
           value={local}
           onChange={handleChange}
-          placeholder="scratch notes…"
+          placeholder="what's on your mind?"
           autoFocus
           className={cn(
             'hand bg-transparent w-full h-full resize-none border-none outline-none',
