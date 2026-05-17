@@ -21,7 +21,9 @@ import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
+import { promptMoveTask } from '@/lib/store/useMoveTaskStore';
 import { LabelChips } from '@/components/labels/LabelChips';
+import { renderRichText } from '@/lib/richText';
 import type { Subtask, Task } from '@/lib/idb/db';
 
 interface TaskRowProps {
@@ -30,6 +32,10 @@ interface TaskRowProps {
   showNumber?: boolean;
   draggable?: boolean;
   showSkip?: boolean;
+  /** When true, this task originally belonged to a previous day and is being
+   *  surfaced on today's list. Renders a date chip and routes single-click to
+   *  the move-to-day prompt. */
+  carryover?: boolean;
 }
 
 export function TaskRow({
@@ -38,6 +44,7 @@ export function TaskRow({
   showNumber = true,
   draggable = true,
   showSkip = false,
+  carryover = false,
 }: TaskRowProps) {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   const tickMs = useTimerStore((s) => s.tickMs);
@@ -67,6 +74,17 @@ export function TaskRow({
   async function handleTimer() {
     if (task.state === 'running') await pauseTimer(task.id);
     else await startTimer(task.id);
+  }
+
+  function handleRowClick(e: React.MouseEvent) {
+    if (!carryover || !task.day_key) return;
+    // Don't override double-click or interactions on inner controls.
+    if (e.detail > 1) return;
+    promptMoveTask({
+      taskId: task.id,
+      taskTitle: task.title,
+      fromDayKey: task.day_key,
+    });
   }
 
   const checkState =
@@ -100,37 +118,48 @@ export function TaskRow({
     setEditingEst(false);
   }
 
+  const carryFromLabel =
+    carryover && task.day_key ? formatDayLabel(task.day_key).monthDay : null;
+
   return (
     <div
       ref={sortable.setNodeRef}
       style={{ ...style }}
       {...sortable.attributes}
       className={cn(
-        'flex items-start gap-3 py-1 group',
+        'group flex flex-col py-1',
         task.state === 'done' && 'opacity-80',
         task.skipped && 'opacity-50',
       )}
     >
-      {showNumber && index !== undefined && (
-        <span className="num-prefix" style={{ paddingTop: 4 }}>{index + 1}.</span>
-      )}
-
-      <span style={{ paddingTop: 4, flexShrink: 0 }}>
-        <HandCheckbox state={checkState} onClick={handleCheck} />
-      </span>
-
+      {/* ── Top row: all primary controls aligned on one line ─────────── */}
       <div
-        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing col"
-        {...(draggable && task.state !== 'done' ? sortable.listeners : {})}
-        onDoubleClick={() => openEditor(task.id)}
-        style={{ minHeight: 24 }}
+        className="flex items-center gap-3 min-w-0"
+        style={{ minHeight: 28, cursor: carryover ? 'pointer' : undefined }}
+        onClick={carryover ? handleRowClick : undefined}
       >
-        <div className="flex items-center gap-3 min-w-0" style={{ minHeight: 24 }}>
+        {showNumber && index !== undefined && (
+          <span className="num-prefix">{index + 1}.</span>
+        )}
+
+        <span style={{ flexShrink: 0 }}>
+          <HandCheckbox state={checkState} onClick={handleCheck} />
+        </span>
+
+        <div
+          className={cn(
+            'flex-1 min-w-0 flex items-center gap-3',
+            !carryover && task.state !== 'done' && draggable && 'cursor-grab active:cursor-grabbing',
+          )}
+          {...(draggable && !carryover && task.state !== 'done' ? sortable.listeners : {})}
+          onDoubleClick={() => openEditor(task.id)}
+        >
           <span
             className={cn(
-              'task-label flex-1 min-w-0',
+              'task-label min-w-0',
               (task.state === 'done' || task.skipped) && 'strike',
             )}
+            style={{ flex: '1 1 auto' }}
           >
             {task.title}
             {task.subtasks && task.subtasks.length > 0 && (
@@ -148,6 +177,26 @@ export function TaskRow({
             )}
           </span>
 
+          {carryFromLabel && (
+            <span
+              className="ui shrink-0"
+              title={`originally scheduled ${carryFromLabel} — click to move`}
+              style={{
+                fontSize: 11,
+                letterSpacing: '0.06em',
+                fontWeight: 600,
+                color: 'var(--terra-deep)',
+                background: 'var(--terra-tint)',
+                border: '1px solid var(--terra-deep)',
+                borderRadius: 999,
+                padding: '1px 8px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              from {carryFromLabel}
+            </span>
+          )}
+
           {(task.start_time || task.end_time) && (
             <span
               className="mono num muted shrink-0"
@@ -159,7 +208,6 @@ export function TaskRow({
           )}
 
           <LabelChips taskId={task.id} size="sm" />
-
 
           {task.state === 'running' ? (
             <div className="flex items-center gap-3 shrink-0">
@@ -212,6 +260,7 @@ export function TaskRow({
                   if (e.key === 'Escape') { setEstDraft(String(task.est_minutes)); setEditingEst(false); }
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 className="ui num"
                 style={{
                   width: 52,
@@ -251,75 +300,82 @@ export function TaskRow({
           )}
         </div>
 
-        {/* Inline description — small dimmed line under the title */}
-        {task.description && task.state !== 'running' && (
-          <p
-            className="hand"
-            style={{
-              fontSize: 15,
-              color: 'var(--ink-faint)',
-              lineHeight: 1.3,
-              margin: '2px 0 0',
-              whiteSpace: 'pre-line',
-            }}
+        {/* Trailing controls — aligned with title via items-center on parent */}
+        <TaskActionMenu task={task} />
+
+        {showSkip && task.state !== 'done' && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); void skipTask(task.id, !task.skipped); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="tiny opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            aria-label={task.skipped ? 'Unskip' : 'Skip today'}
           >
-            {task.description}
-          </p>
+            {task.skipped ? '↺ unskip' : 'skip'}
+          </button>
         )}
 
-        {/* Subtask checklist — quick toggle of each item */}
-        {task.subtasks && task.subtasks.length > 0 && (
-          <SubtaskList taskId={task.id} subtasks={task.subtasks} />
-        )}
-
-        {/* Completion note shown on done tasks */}
-        {task.state === 'done' && task.completion_note && (
-          <p
-            className="hand"
+        {task.state !== 'done' && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); void handleTimer(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={cn(
+              'mono opacity-0 group-hover:opacity-100 transition-opacity shrink-0 px-1 py-0.5',
+              'focus-visible:opacity-100',
+            )}
             style={{
-              fontSize: 14,
-              color: 'var(--ink-faint)',
-              fontStyle: 'italic',
-              margin: '2px 0 0',
-              whiteSpace: 'pre-line',
+              color:
+                task.state === 'running' ? 'var(--terra-deep)' : 'var(--ink-faint)',
+              fontSize: 11,
             }}
           >
-            ⤷ {task.completion_note}
-          </p>
+            {task.state === 'running' ? '⏸' : '▸ start'}
+          </button>
         )}
       </div>
 
-      <TaskActionMenu task={task} />
-
-      {showSkip && task.state !== 'done' && (
-        <button
-          type="button"
-          onClick={() => skipTask(task.id, !task.skipped)}
-          className="tiny opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ paddingTop: 4 }}
-          aria-label={task.skipped ? 'Unskip' : 'Skip today'}
-        >
-          {task.skipped ? '↺ unskip' : 'skip'}
-        </button>
-      )}
-
-      {task.state !== 'done' && (
-        <button
-          type="button"
-          onClick={handleTimer}
-          className={cn(
-            'mono opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5',
-            'focus-visible:opacity-100',
-          )}
+      {/* ── Inline description with clickable links ─────────────────── */}
+      {task.description && task.state !== 'running' && (
+        <p
+          className="hand"
           style={{
-            color:
-              task.state === 'running' ? 'var(--terra-deep)' : 'var(--ink-faint)',
-            fontSize: 11,
-            paddingTop: 4,
+            fontSize: 15,
+            color: 'var(--ink-faint)',
+            lineHeight: 1.3,
+            margin: '2px 0 0',
+            paddingLeft: showNumber ? 56 : 28,
+            whiteSpace: 'pre-line',
           }}
         >
-          {task.state === 'running' ? '⏸' : '▸ start'}
-        </button>
+          {renderRichText(task.description)}
+        </p>
+      )}
+
+      {/* Subtask checklist — quick toggle of each item */}
+      {task.subtasks && task.subtasks.length > 0 && (
+        <SubtaskList
+          taskId={task.id}
+          subtasks={task.subtasks}
+          paddingLeft={showNumber ? 56 : 28}
+        />
+      )}
+
+      {/* Completion note shown on done tasks */}
+      {task.state === 'done' && task.completion_note && (
+        <p
+          className="hand"
+          style={{
+            fontSize: 14,
+            color: 'var(--ink-faint)',
+            fontStyle: 'italic',
+            margin: '2px 0 0',
+            paddingLeft: showNumber ? 56 : 28,
+            whiteSpace: 'pre-line',
+          }}
+        >
+          ⤷ {renderRichText(task.completion_note)}
+        </p>
       )}
     </div>
   );
@@ -424,7 +480,7 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
     : [];
 
   return (
-    <div ref={ref} style={{ position: 'relative', paddingTop: 2, flexShrink: 0 }}>
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
@@ -503,9 +559,10 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
 interface SubtaskListProps {
   taskId: string;
   subtasks: Subtask[];
+  paddingLeft?: number;
 }
 
-function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
+function SubtaskList({ taskId, subtasks, paddingLeft = 28 }: SubtaskListProps) {
   async function toggle(id: string) {
     const next = subtasks.map((s) =>
       s.id === id ? { ...s, done: !s.done } : s,
@@ -516,7 +573,7 @@ function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
   return (
     <div
       className="col"
-      style={{ gap: 2, marginTop: 4, paddingLeft: 2 }}
+      style={{ gap: 2, marginTop: 4, paddingLeft }}
     >
       {subtasks.map((s) => (
         <button
@@ -528,7 +585,7 @@ function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
           style={{
             gap: 8,
             padding: '2px 6px',
-            borderRadius: 3,
+            borderRadius: 4,
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',

@@ -19,6 +19,7 @@ import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
+import { renderRichText } from '@/lib/richText';
 import type { Task } from '@/lib/idb/db';
 
 interface RuleOf3SlotProps {
@@ -78,7 +79,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
           border: droppable.isOver
             ? '1.6px solid var(--sage-deep)'
             : '1.5px dashed var(--ink-faint)',
-          borderRadius: 4,
+          borderRadius: 6,
         }}
       >
         <div className="row items-center justify-between">
@@ -113,7 +114,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
     padding: '16px 18px 14px',
     background: 'var(--sage-wash)',
     border: isDropTarget
-      ? '2px solid var(--sage-deep)'
+      ? '1.6px solid var(--sage-deep)'
       : '1.6px solid var(--ink)',
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
@@ -202,7 +203,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
               whiteSpace: 'pre-line',
             }}
           >
-            {task.description}
+            {renderRichText(task.description)}
           </p>
         )}
 
@@ -217,7 +218,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
               whiteSpace: 'pre-line',
             }}
           >
-            ⤷ {task.completion_note}
+            ⤷ {renderRichText(task.completion_note)}
           </p>
         )}
       </div>

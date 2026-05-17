@@ -248,8 +248,8 @@ export function TaskEditor({ userId }: TaskEditorProps) {
     >
       <form
         onSubmit={handleSubmit}
-        className="paper ink-box-soft col gap-5 p-8 w-full max-w-2xl rounded-card"
-        style={{ maxHeight: '90vh', overflowY: 'auto' }}
+        className="paper ink-box-soft col gap-5 p-8 w-full rounded-card"
+        style={{ maxWidth: 840, maxHeight: '92vh', overflowY: 'auto' }}
       >
         <h2 className="font-hand text-h3">
           {editingTaskId ? 'edit task' : 'new task'}

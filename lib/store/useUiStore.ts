@@ -36,6 +36,9 @@ interface UiState {
   notepadArchiveOpen: boolean;
   setNotepadArchiveOpen: (open: boolean) => void;
 
+  scratchOpen: boolean;
+  setScratchOpen: (open: boolean) => void;
+
   commandPaletteOpen: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
 
@@ -76,6 +79,9 @@ export const useUiStore = create<UiState>()((set) => ({
 
   notepadArchiveOpen: false,
   setNotepadArchiveOpen: (open) => set({ notepadArchiveOpen: open }),
+
+  scratchOpen: false,
+  setScratchOpen: (open) => set({ scratchOpen: open }),
 
   commandPaletteOpen: false,
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),

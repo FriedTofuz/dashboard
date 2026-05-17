@@ -34,8 +34,8 @@ const config: Config = {
         print: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        card: '5px',
-        input: '3px',
+        card: '6px',
+        input: '4px',
         bar: '8px',
       },
       fontSize: {
