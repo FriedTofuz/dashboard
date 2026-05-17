@@ -69,8 +69,8 @@ export function ManageLabelsModal({ userId }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.25)' }}
+      className="fixed inset-0 flex items-center justify-center p-6"
+      style={{ background: 'rgba(0,0,0,0.25)', zIndex: 60 }}
       onClick={() => setOpen(false)}
     >
       <div

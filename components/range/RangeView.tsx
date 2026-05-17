@@ -1,10 +1,15 @@
 'use client';
 
 import { DayColumn } from './DayColumn';
+import { LongTermStatsPanel } from '@/components/stats/LongTermStatsPanel';
 import { addDays, todayKey } from '@/lib/time/dayKey';
 import { useUiStore } from '@/lib/store/useUiStore';
 
-export function RangeView() {
+interface RangeViewProps {
+  userId: string;
+}
+
+export function RangeView({ userId }: RangeViewProps) {
   const rangeWindow = useUiStore((s) => s.rangeWindow);
   const setRangeWindow = useUiStore((s) => s.setRangeWindow);
 
@@ -52,6 +57,8 @@ export function RangeView() {
           })}
         </div>
       </div>
+
+      <LongTermStatsPanel userId={userId} />
 
       {days.length === 0 ? (
         <div className="empty-state">
