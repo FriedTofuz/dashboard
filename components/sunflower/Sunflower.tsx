@@ -113,12 +113,12 @@ function SunflowerSvg({ state }: { state: FlowerState }) {
         cy={c.headY}
         r={c.centerR}
         fill={c.centerFill}
-        stroke="#2b1a0a"
+        stroke="#5C3E1A"
         strokeWidth={1.1}
         filter="url(#wobble)"
       />
       {seeds.map((s, i) => (
-        <circle key={i} cx={s.cx} cy={s.cy} r={0.9} fill="#2b1a0a" opacity={0.8} />
+        <circle key={i} cx={s.cx} cy={s.cy} r={0.9} fill="#5C3E1A" opacity={0.8} />
       ))}
 
       <g transform={`rotate(${c.potTilt} 100 260)`}>

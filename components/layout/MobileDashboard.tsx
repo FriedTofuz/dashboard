@@ -18,6 +18,7 @@ import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
+import { ThemeToggle } from '@/components/system/ThemeToggle';
 import { RangeView } from '@/components/range/RangeView';
 import { ArchiveView } from '@/components/archive/ArchiveView';
 import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
@@ -58,20 +59,26 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <ShortcutsListener />
 
       <DndProvider>
-        <main className="flex-1 px-4 py-5 pb-24">
+        <main
+          className="flex-1"
+          style={{ padding: '24px 20px 96px', minWidth: 0 }}
+        >
           {tab === 'today' && (
-            <div className="col gap-4">
+            <div className="col" style={{ gap: 24 }}>
               <TopBar />
               <ProgressCard dayKey={currentDayKey} deficitSeconds={deficitSeconds} />
               <RuleOf3Row dayKey={currentDayKey} />
               <HabitsSection dayKey={currentDayKey} />
-              <div className="col gap-1">
-                <p className="tiny text-sage-deep">other tasks</p>
+              <div className="col" style={{ gap: 10 }}>
+                <p className="section-head muted">Other tasks</p>
                 <TaskList dayKey={currentDayKey} kind="open" />
               </div>
-              <div className="col gap-1">
-                <p className="tiny text-sage-deep">done</p>
+              <div className="col" style={{ gap: 10 }}>
+                <p className="section-head sage">Done</p>
                 <TaskList dayKey={currentDayKey} kind="done" />
+              </div>
+              <div className="row" style={{ gap: 12, paddingTop: 4 }}>
+                <ThemeToggle />
               </div>
             </div>
           )}
@@ -79,64 +86,137 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
           {tab === 'range' && <RangeView />}
 
           {tab === 'notepad' && (
-            <div className="col gap-3 h-[80vh]">
-              <h2 className="font-hand text-h2">
+            <div className="col" style={{ gap: 14, height: '80vh' }}>
+              <h2
+                className="hand"
+                style={{ fontSize: 32, lineHeight: 1, fontWeight: 700 }}
+              >
                 <span className="underline-hand">notes</span>
               </h2>
-              <Notepad dayKey={currentDayKey} userId={userId} className="flex-1" />
+              <Notepad
+                dayKey={currentDayKey}
+                userId={userId}
+                className="flex-1"
+              />
             </div>
           )}
 
           {tab === 'stats' && (
-            <div className="col gap-3">
-              <h2 className="font-hand text-h2">
+            <div className="col" style={{ gap: 18 }}>
+              <h2
+                className="hand"
+                style={{ fontSize: 32, lineHeight: 1, fontWeight: 700 }}
+              >
                 <span className="underline-hand">stats</span>
               </h2>
-              <FlowerCard state={flowerState} />
-              <StatsCard userId={userId} dayKey={currentDayKey} deficitSeconds={deficitSeconds} />
+              <FlowerCard
+                state={flowerState}
+                dayKey={currentDayKey}
+                userId={userId}
+              />
+              <StatsCard
+                userId={userId}
+                dayKey={currentDayKey}
+                deficitSeconds={deficitSeconds}
+                mobile
+              />
             </div>
           )}
 
           {tab === 'archive' && <ArchiveView userId={userId} />}
         </main>
 
-        {/* Floating add button */}
         {tab === 'today' && (
           <button
             type="button"
             onClick={() => openEditor()}
-            className="fixed bottom-20 right-5 ink-box paper rounded-full font-hand text-h2 px-5 py-3 shadow-lg hover:wash-sage transition-colors z-10"
+            className="fixed wobble hover:bg-paper-warm transition-colors"
+            style={{
+              bottom: 84,
+              right: 20,
+              background: 'var(--paper)',
+              border: '1.5px solid var(--ink)',
+              borderRadius: '999px',
+              padding: '14px 20px',
+              fontFamily: 'var(--font-caveat), cursive',
+              fontWeight: 700,
+              fontSize: 26,
+              boxShadow: 'var(--shadow)',
+              zIndex: 10,
+            }}
             aria-label="Add task"
           >
             +
           </button>
         )}
 
-        {/* Bottom tab bar */}
+        {/* Bottom tab bar — §9 #4: terra underline + terra icon for active */}
         <nav
-          className="fixed bottom-0 left-0 right-0 paper border-t z-20"
+          className="fixed left-0 right-0 bottom-0 paper no-print"
           style={{
-            borderColor: 'var(--ink-faint)',
+            borderTop: '1px solid var(--ink-faint)',
             paddingBottom: 'env(safe-area-inset-bottom)',
+            zIndex: 20,
           }}
         >
           <div className="row items-stretch justify-around">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  'col items-center gap-0.5 flex-1 py-2 transition-colors',
-                  tab === t.id ? 'text-terra-deep' : 'muted',
-                )}
-                aria-label={t.label}
-                aria-current={tab === t.id ? 'page' : undefined}
-              >
-                <span className="text-lg leading-none">{t.icon}</span>
-                <span className="font-hand text-[11px]">{t.label}</span>
-              </button>
-            ))}
+            {TABS.map((t) => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  className="col items-center"
+                  style={{
+                    flex: 1,
+                    padding: '8px 0 10px',
+                    gap: 2,
+                    position: 'relative',
+                    color: active ? 'var(--terra-deep)' : 'var(--ink-faint)',
+                  }}
+                  aria-label={t.label}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(active && 'wobble')}
+                    style={{
+                      fontSize: 20,
+                      lineHeight: 1,
+                      color: active ? 'var(--terra)' : 'var(--ink-faint)',
+                    }}
+                  >
+                    {t.icon}
+                  </span>
+                  <span
+                    className="ui"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 500,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {t.label}
+                  </span>
+                  {active && (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: '20%',
+                        right: '20%',
+                        height: 3,
+                        background: 'var(--terra)',
+                        borderRadius: 2,
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </nav>
       </DndProvider>

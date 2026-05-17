@@ -3,24 +3,80 @@
 @tailwind utilities;
 
 /* ============================================================
-   Design tokens
+   v2 Design tokens — see design/INSTRUCTIONS-V2.md §2
    ============================================================ */
 :root {
-  --paper:              #F5EFE6;
-  --paper-warm:         #EFE7DA;
-  --paper-shadow:       #E6DCC9;
-  --ink:                #2B2622;
-  --ink-soft:           #4A423B;
-  --ink-faint:          #8A8175;
-  --sage:               #8A9A82;
-  --sage-deep:          #6C7D65;
-  --sage-wash:          #C8D2BF;
-  --terracotta:         #C08775;
-  --terracotta-deep:    #A06A58;
-  --terracotta-wash:    #E6C9BD;
-  --rule:               rgba(43, 38, 34, 0.10);
-  --rule-strong:        rgba(43, 38, 34, 0.22);
-  --shadow:             0 1px 0 rgba(43,38,34,0.05), 0 8px 24px rgba(43,38,34,0.06);
+  /* surfaces */
+  --paper:              #F2EADA;
+  --paper-warm:         #E9DFCB;
+  --paper-shadow:       #DDD0B6;
+  --paper-edge:         #C9B894;
+
+  /* ink — darker than v1 (#1C1814 was #2B2622) */
+  --ink:                #1C1814;
+  --ink-soft:           #3A322B;
+  --ink-faint:          #6E6457;
+
+  /* sage — success / R3 / progress */
+  --sage:               #6B8A5C;
+  --sage-deep:          #4C6B3F;
+  --sage-wash:          #C8D4B8;
+  --sage-tint:          rgba(107, 138, 92, 0.16);
+
+  /* terracotta — today / live timer / deficit / attention */
+  --terracotta:         #B85C3E;
+  --terra:              #B85C3E;
+  --terracotta-deep:    #8E3F26;
+  --terra-deep:         #8E3F26;
+  --terracotta-wash:    #EDC8B8;
+  --terra-wash:         #EDC8B8;
+  --terra-tint:         rgba(184, 92, 62, 0.16);
+
+  /* ochre — NEW in v2 — sunflower echo / streak / accents */
+  --ochre:              #C98A2E;
+  --ochre-deep:         #9A6618;
+  --ochre-wash:         #EFD9A8;
+  --ochre-tint:         rgba(201, 138, 46, 0.16);
+
+  /* rules */
+  --rule:               rgba(28, 24, 20, 0.10);
+  --rule-strong:        rgba(28, 24, 20, 0.24);
+  --shadow:             0 1px 0 rgba(28,24,20,0.05), 0 8px 24px rgba(28,24,20,0.06);
+}
+
+/* ============================================================
+   Dark mode tokens — see design/INSTRUCTIONS-V2.md §6
+   ============================================================ */
+[data-theme="dark"] {
+  --paper:              #1A1612;
+  --paper-warm:         #221D17;
+  --paper-shadow:       #100D0A;
+  --paper-edge:         #2F2820;
+
+  --ink:                #EDE3D0;
+  --ink-soft:           #C9BFA9;
+  --ink-faint:          #897F6E;
+
+  --sage:               #9CBA8D;
+  --sage-deep:          #B8D5A8;
+  --sage-wash:          rgba(156, 186, 141, 0.16);
+  --sage-tint:          rgba(156, 186, 141, 0.08);
+
+  --terracotta:         #E08361;
+  --terra:              #E08361;
+  --terracotta-deep:    #F0A382;
+  --terra-deep:         #F0A382;
+  --terracotta-wash:    rgba(224, 131, 97, 0.16);
+  --terra-wash:         rgba(224, 131, 97, 0.16);
+  --terra-tint:         rgba(224, 131, 97, 0.08);
+
+  --ochre:              #E8B260;
+  --ochre-deep:         #F4CB85;
+  --ochre-wash:         rgba(232, 178, 96, 0.18);
+  --ochre-tint:         rgba(232, 178, 96, 0.08);
+
+  --rule:               rgba(237, 227, 208, 0.10);
+  --rule-strong:        rgba(237, 227, 208, 0.22);
 }
 
 /* ============================================================
@@ -28,20 +84,21 @@
    ============================================================ */
 @layer base {
   body {
-    font-family: var(--font-caveat), cursive;
-    font-weight: 500;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-weight: 400;
     background: var(--paper);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss01';
   }
 
   * {
     box-sizing: border-box;
   }
 
-  /* Focus rings — non-negotiable, design spec §accessibility */
+  /* Focus rings — design spec §accessibility */
   :focus-visible {
-    outline: 2px solid var(--terracotta);
+    outline: 2px solid var(--terra);
     outline-offset: 2px;
   }
 }
@@ -49,16 +106,52 @@
 /* ============================================================
    Typography helpers
    ============================================================ */
-.hand   { font-family: var(--font-caveat), cursive; font-weight: 500; }
+.hand   { font-family: var(--font-caveat), cursive; font-weight: 600; }
 .hand-b { font-family: var(--font-caveat), cursive; font-weight: 700; }
-.print  { font-family: var(--font-kalam), cursive;  font-weight: 400; }
-.mono   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.04em; }
-.tiny   {
+.ui     { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; }
+.ui-b   { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; }
+.mono   {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+/* §1.2 tiny — DM Sans replacement for Kalam */
+.tiny {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 500;
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  font-family: var(--font-kalam), cursive;
+}
+
+/* numeric helpers — tabular alignment for stats columns */
+.num   { font-variant-numeric: tabular-nums; }
+.num-lg {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.num-md {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* §1.2 task-label — Caveat 22, for user-voice content */
+.task-label {
+  font-family: var(--font-caveat), cursive;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  color: var(--ink);
 }
 
 /* ============================================================
@@ -66,8 +159,8 @@
    ============================================================ */
 .paper {
   background:
-    radial-gradient(circle at 20% 30%, rgba(43,38,34,0.025) 0 1px, transparent 1px) 0 0 / 7px 7px,
-    radial-gradient(circle at 70% 60%, rgba(43,38,34,0.02)  0 1px, transparent 1px) 3px 5px / 11px 11px,
+    radial-gradient(circle at 20% 30%, rgba(28,24,20,0.030) 0 1px, transparent 1px) 0 0 / 7px 7px,
+    radial-gradient(circle at 70% 60%, rgba(28,24,20,0.022) 0 1px, transparent 1px) 3px 5px / 11px 11px,
     var(--paper);
   color: var(--ink);
   position: relative;
@@ -78,8 +171,19 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at top left,     rgba(43,38,34,0.04), transparent 40%),
-    radial-gradient(ellipse at bottom right, rgba(43,38,34,0.05), transparent 45%);
+    radial-gradient(ellipse at top left,     rgba(28,24,20,0.04), transparent 40%),
+    radial-gradient(ellipse at bottom right, rgba(28,24,20,0.05), transparent 45%);
+}
+[data-theme="dark"] .paper {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(237,227,208,0.012) 0 1px, transparent 1px) 0 0 / 7px 7px,
+    radial-gradient(circle at 70% 60%, rgba(237,227,208,0.010) 0 1px, transparent 1px) 3px 5px / 11px 11px,
+    var(--paper);
+}
+[data-theme="dark"] .paper::before {
+  background:
+    radial-gradient(ellipse at top left,     rgba(237,227,208,0.04), transparent 40%),
+    radial-gradient(ellipse at bottom right, rgba(237,227,208,0.04), transparent 45%);
 }
 
 /* Ruled lines */
@@ -105,14 +209,17 @@
   position: absolute;
   top: 0; bottom: 0; left: 56px;
   width: 1px;
-  background: rgba(192,135,117,0.45);
+  background: rgba(184, 92, 62, 0.45);
   pointer-events: none;
 }
 
 /* Dot grid (sunflower card background) */
 .dotgrid {
-  background-image: radial-gradient(circle, rgba(43,38,34,0.13) 0.7px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(28,24,20,0.13) 0.7px, transparent 1px);
   background-size: 18px 18px;
+}
+[data-theme="dark"] .dotgrid {
+  background-image: radial-gradient(circle, rgba(237,227,208,0.10) 0.7px, transparent 1px);
 }
 
 /* ============================================================
@@ -137,7 +244,7 @@
   filter: url(#wobble);
 }
 .ink-box-terra {
-  border: 1.6px solid var(--terracotta-deep);
+  border: 1.6px solid var(--terra-deep);
   border-radius: 4px;
   filter: url(#wobble);
 }
@@ -165,6 +272,7 @@
   text-underline-offset: 0;
 }
 
+/* §3 — Date header underline: terra wobble, 3 px, 70% opacity */
 .underline-hand {
   position: relative;
   display: inline-block;
@@ -174,14 +282,14 @@
   position: absolute;
   left: -2px; right: -2px; bottom: -4px;
   height: 3px;
-  background: var(--terracotta);
+  background: var(--terra);
   border-radius: 2px;
   filter: url(#wobble);
   opacity: 0.7;
 }
 
 /* ============================================================
-   Hand-drawn checkbox
+   Hand-drawn checkbox — v2 §3 "Sage = success everywhere"
    ============================================================ */
 .box {
   display: inline-block;
@@ -194,6 +302,10 @@
   flex-shrink: 0;
   cursor: pointer;
 }
+.box.checked {
+  background: var(--sage-deep);
+  border-color: var(--sage-deep);
+}
 .box.checked::after {
   content: '✓';
   position: absolute;
@@ -201,15 +313,16 @@
   font-family: var(--font-caveat), cursive;
   font-size: 20px;
   line-height: 16px;
-  color: var(--terracotta-deep);
+  color: var(--paper);
   text-align: center;
   transform: rotate(-6deg);
+  font-weight: 700;
 }
 .box.timer::after {
   content: '';
   position: absolute;
   inset: 3px;
-  background: var(--terracotta);
+  background: var(--terra);
   border-radius: 2px;
   filter: url(#wobble);
   animation: pulse 1.4s ease-in-out infinite;
@@ -230,31 +343,35 @@
    Soft highlighters
    ============================================================ */
 .highlight-sage {
-  background: linear-gradient(180deg, transparent 8%, rgba(138,154,130,0.22) 8% 92%, transparent 92%);
+  background: linear-gradient(180deg, transparent 8%, rgba(107,138,92,0.22) 8% 92%, transparent 92%);
   padding: 2px 6px;
 }
 .highlight-terra {
-  background: linear-gradient(180deg, transparent 8%, rgba(192,135,117,0.20) 8% 92%, transparent 92%);
+  background: linear-gradient(180deg, transparent 8%, rgba(184,92,62,0.20) 8% 92%, transparent 92%);
   padding: 2px 6px;
 }
-.wash-sage  { background: rgba(138,154,130,0.14); }
-.wash-terra { background: rgba(192,135,117,0.14); }
+.wash-sage  { background: var(--sage-tint); }
+.wash-terra { background: var(--terra-tint); }
+.wash-ochre { background: var(--ochre-tint); }
+.wash-sage-solid { background: var(--sage-wash); }
+.wash-terra-solid { background: var(--terra-wash); }
+.wash-ochre-solid { background: var(--ochre-wash); }
 
 /* ============================================================
-   Washi tape accent
+   Washi tape accent — terracotta tint, dashed edges
    ============================================================ */
 .tape {
   position: absolute;
-  width: 90px; height: 22px;
-  background: rgba(192,135,117,0.25);
-  border-left:  1px dashed rgba(192,135,117,0.5);
-  border-right: 1px dashed rgba(192,135,117,0.5);
+  width: 90px; height: 20px;
+  background: var(--terra-tint);
+  border-left:  1px dashed var(--terra);
+  border-right: 1px dashed var(--terra);
   transform: rotate(-3deg);
-  top: -10px; left: 24px;
+  top: -10px; right: 24px;
 }
 
 /* ============================================================
-   Progress bar (sketched)
+   Progress bar (sketched) — sage default, ochre when >100
    ============================================================ */
 .bar {
   position: relative;
@@ -276,10 +393,17 @@
   border-radius: 6px;
   transition: width 400ms ease-out;
 }
+.bar > .bar-fill.over {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--ochre) 0 6px,
+    var(--ochre-deep) 6px 7px
+  );
+}
 .bar > .bar-cap {
   position: absolute;
   inset: 2px auto 2px 2px;
-  background: rgba(138,154,130,0.15);
+  background: rgba(107,138,92,0.15);
   border-radius: 6px;
 }
 
@@ -293,18 +417,22 @@
 .gap-3  { gap: 12px; }
 .gap-4  { gap: 16px; }
 .gap-6  { gap: 24px; }
+.gap-7  { gap: 28px; }
 .gap-8  { gap: 32px; }
 
 .muted  { color: var(--ink-faint); }
 .soft   { color: var(--ink-soft); }
 
-.num {
-  font-family: var(--font-caveat), cursive;
-  font-weight: 700;
-  width: 26px;
+/* tiny numeric prefix in task lists ("1.", "2.") */
+.num-prefix {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  width: 22px;
   text-align: right;
-  color: var(--ink-soft);
+  color: var(--ink-faint);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .pad    { padding: 28px 32px; }
@@ -323,10 +451,133 @@
 }
 
 /* ============================================================
+   Section headers — DM Sans 600 uppercase, 0.12em tracking
+   ============================================================ */
+.section-head {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: block;
+  line-height: 1.4;
+}
+.section-head .sub {
+  font-family: var(--font-caveat), cursive;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--ink-faint);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 10px;
+  display: inline;
+  vertical-align: 1px;
+}
+.section-head.sage  { color: var(--sage-deep); }
+.section-head.terra { color: var(--terra-deep); }
+.section-head.ochre { color: var(--ochre-deep); }
+.section-head.muted { color: var(--ink-faint); }
+
+/* ============================================================
    Misc
    ============================================================ */
 .annot {
   font-family: var(--font-caveat), cursive;
-  color: var(--terracotta-deep);
-  font-size: 18px;
+  color: var(--terra-deep);
+  font-size: 17px;
+}
+
+/* Empty-state container — used per §8 */
+.empty-state {
+  border: 1.5px dashed var(--ink-faint);
+  border-radius: 6px;
+  filter: url(#wobble);
+  padding: 28px 24px;
+  text-align: center;
+  color: var(--ink-faint);
+}
+.empty-state .headline {
+  font-family: var(--font-caveat), cursive;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 4px;
+}
+.empty-state .sub {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+
+/* Reward badge "+1 ✿" — ochre per v2 §3 / §9 */
+.reward-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--ochre-wash);
+  color: var(--ochre-deep);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ============================================================
+   Print stylesheet — see §7
+   ============================================================ */
+.print-only { display: none; }
+
+@media print {
+  @page { size: letter portrait; margin: 0.5in; }
+
+  /* Strip canvas, scaffolding, navigation */
+  .no-print, button { display: none !important; }
+
+  body { background: white; color: #000; }
+
+  /* Paper texture off */
+  .paper {
+    background: white !important;
+  }
+  .paper::before { display: none; }
+  .dotgrid { background-image: none !important; background: white !important; }
+  .ruled, .ruled-dense {
+    background-image: repeating-linear-gradient(to bottom, transparent 0 23px, #ccc 23px 24px) !important;
+  }
+
+  /* Wobble filter off — printers smear it */
+  .wobble, .ink-box, .ink-box-soft, .ink-box-dashed, .ink-box-double,
+  .ink-box-sage, .ink-box-terra, .box, .bar {
+    filter: none !important;
+  }
+  .ink-box, .ink-box-soft, .ink-box-sage, .ink-box-terra {
+    border: 1px solid #000 !important;
+  }
+  .ink-box-dashed { border: 1px dashed #666 !important; }
+
+  /* Accents print as ink-only (most home printers are B&W) */
+  .bar > .bar-fill {
+    background: repeating-linear-gradient(45deg, #444 0 4px, #000 4px 5px) !important;
+  }
+  .text-terra-deep, .text-terra, .text-sage, .text-sage-deep, .text-ochre, .text-ochre-deep {
+    color: #000 !important;
+    font-weight: 700;
+  }
+  .strike { color: #999 !important; }
+
+  /* Layout — single column, right rail under */
+  .v2-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+
+  /* Type — drop sizes ~15% to fit a day on a page */
+  .v2-date-display { font-size: 36pt !important; }
+  h1 { font-size: 16pt; }
+  h2 { font-size: 13pt; }
+  h3 { font-size: 11pt; }
+
+  /* Show print header */
+  .print-only { display: block !important; }
 }

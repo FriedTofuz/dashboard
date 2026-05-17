@@ -1,6 +1,7 @@
 'use client';
 
 import { useUiStore } from '@/lib/store/useUiStore';
+import { ThemeToggle } from '@/components/system/ThemeToggle';
 
 function timeAgo(ts: number | null): string {
   if (!ts) return 'never';
@@ -13,6 +14,25 @@ function timeAgo(ts: number | null): string {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+
+const btnStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+  fontWeight: 500,
+  fontSize: 13,
+  border: '1.5px solid var(--ink-soft)',
+  borderRadius: 5,
+  padding: '8px 14px',
+  background: 'var(--paper)',
+  color: 'var(--ink)',
+  cursor: 'pointer',
+  minHeight: 36,
+};
+
+const kbdStyle: React.CSSProperties = {
+  ...btnStyle,
+  fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+  padding: '8px 10px',
+};
 
 export function Footer() {
   const openEditor = useUiStore((s) => s.openEditor);
@@ -31,45 +51,66 @@ export function Footer() {
         : `last synced · ${timeAgo(lastSyncedAt)}`;
 
   return (
-    <div className="row items-center justify-between mt-2 flex-wrap gap-2">
-      <div className="row gap-3 flex-wrap">
+    <div
+      className="row items-center justify-between no-print"
+      style={{ marginTop: 'auto', paddingTop: 12, gap: 12, flexWrap: 'wrap' }}
+    >
+      <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => openEditor()}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={btnStyle}
         >
           + add task
         </button>
         <button
           type="button"
           onClick={() => setHabitsEditorOpen(true)}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={btnStyle}
         >
           habits
         </button>
         <button
           type="button"
           onClick={() => setView(view === 'range' ? 'today' : 'range')}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={btnStyle}
         >
           {view === 'range' ? 'today' : 'range view'}
         </button>
         <button
           type="button"
           onClick={() => setView('archive')}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors muted"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={{ ...btnStyle, color: 'var(--ink-faint)' }}
         >
           archive
         </button>
         <button
           type="button"
           onClick={() => setCommandPaletteOpen(true)}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors muted"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={{ ...kbdStyle, color: 'var(--ink-faint)' }}
+          aria-label="Open command palette"
         >
           ⌘K
         </button>
+        <ThemeToggle />
       </div>
-      <span className="tiny muted">{syncLabel}</span>
+      <span
+        className="ui"
+        style={{
+          marginLeft: 'auto',
+          fontSize: 11,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--ink-faint)',
+        }}
+      >
+        {syncLabel}
+      </span>
     </div>
   );
 }

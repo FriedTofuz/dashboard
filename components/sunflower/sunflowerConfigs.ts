@@ -31,9 +31,9 @@ export const SUNFLOWER_CONFIGS: Record<FlowerState, SunflowerConfig> = {
   thriving: {
     headX: 100, headY: 70,
     petals: 14, petalLen: 26, petalW: 6.5,
-    petalFill: '#d9a857', petalStroke: '#5a3f1d',
-    washR: 44, washFill: '#f0c977', washOpacity: 0.55,
-    centerR: 12, centerFill: '#5e3b1f',
+    petalFill: '#E2A934', petalStroke: '#5C3E1A',
+    washR: 44, washFill: '#E8B863', washOpacity: 0.55,
+    centerR: 12, centerFill: '#5C3E1A',
     stem: 'M100 230 Q 98 170 100 95',
     leaves: [
       { d: 'M100 170 q -32 -6 -42 -26 q 28 -2 42 18', rot: -2,
@@ -46,9 +46,9 @@ export const SUNFLOWER_CONFIGS: Record<FlowerState, SunflowerConfig> = {
   healthy: {
     headX: 100, headY: 80,
     petals: 12, petalLen: 22, petalW: 6,
-    petalFill: '#caa05b', petalStroke: '#5a3f1d',
-    washR: 38, washFill: '#e8c283', washOpacity: 0.5,
-    centerR: 11, centerFill: '#5e3b1f',
+    petalFill: '#C2912E', petalStroke: '#5C3E1A',
+    washR: 38, washFill: '#E8B863', washOpacity: 0.5,
+    centerR: 11, centerFill: '#5C3E1A',
     stem: 'M100 230 Q 102 175 100 105',
     leaves: [
       { d: 'M100 175 q -28 -4 -38 -22 q 24 -2 38 14', rot: -1,
@@ -61,9 +61,9 @@ export const SUNFLOWER_CONFIGS: Record<FlowerState, SunflowerConfig> = {
   drooping: {
     headX: 118, headY: 115, headAngle: 35,
     petals: 10, petalLen: 18, petalW: 5.5,
-    petalFill: '#b39265', petalStroke: '#5a3f1d',
-    washR: 32, washFill: '#d9bb86', washOpacity: 0.45,
-    centerR: 10, centerFill: '#5e3b1f',
+    petalFill: '#B39265', petalStroke: '#5C3E1A',
+    washR: 32, washFill: '#D9BB86', washOpacity: 0.45,
+    centerR: 10, centerFill: '#5C3E1A',
     stem: 'M100 230 Q 100 185 110 155 Q 118 132 118 122',
     leaves: [
       { d: 'M101 188 q -26 4 -38 -10 q 22 -10 38 -2', rot: 4,
@@ -76,9 +76,9 @@ export const SUNFLOWER_CONFIGS: Record<FlowerState, SunflowerConfig> = {
   wilting: {
     headX: 78, headY: 178, headAngle: 110,
     petals: 8, petalLen: 14, petalW: 5,
-    petalFill: '#9a8a6d', petalStroke: '#5a4a32',
-    washR: 24, washFill: '#bfae87', washOpacity: 0.4,
-    centerR: 8.5, centerFill: '#4a3320',
+    petalFill: '#9A8A6D', petalStroke: '#5A4A32',
+    washR: 24, washFill: '#BFAE87', washOpacity: 0.4,
+    centerR: 8.5, centerFill: '#4A3320',
     stem: 'M100 230 Q 96 200 88 188 Q 82 184 78 185',
     leaves: [
       { d: 'M99 200 q -24 12 -38 4 q 18 -16 38 -8', rot: 14,

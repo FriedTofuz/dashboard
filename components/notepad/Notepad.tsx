@@ -38,21 +38,65 @@ export function Notepad({ dayKey, userId, className, style }: NotepadProps) {
 
   return (
     <div
-      className={cn(
-        'paper ink-box-soft ruled-dense ruled-margin relative flex-1 min-h-0',
-        className,
-      )}
-      style={style ?? { minHeight: 200 }}
+      className={cn('paper relative wobble', className)}
+      style={{
+        border: '1.5px solid var(--ink-soft)',
+        borderRadius: 6,
+        backgroundImage:
+          'repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px)',
+        minHeight: 280,
+        flex: 1,
+        ...style,
+      }}
     >
+      {/* terracotta margin line at 0.45 opacity */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 12,
+          bottom: 12,
+          left: 56,
+          width: 1,
+          background: 'rgba(184, 92, 62, 0.45)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div
+        className="ui-b"
+        style={{
+          position: 'absolute',
+          top: 16,
+          left: 70,
+          right: 18,
+          fontSize: 12,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--ink-faint)',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      >
+        Scratch notes
+      </div>
+
       <textarea
         value={local}
         onChange={handleChange}
         placeholder="scratch notes…"
         className={cn(
-          'font-hand text-body bg-transparent w-full h-full resize-none border-none outline-none',
+          'hand bg-transparent w-full h-full resize-none border-none outline-none',
           'placeholder:text-ink-faint',
         )}
-        style={{ padding: '14px 18px 14px 70px', lineHeight: '32px' }}
+        style={{
+          padding: '40px 18px 16px 70px',
+          lineHeight: '32px',
+          fontSize: 22,
+          fontWeight: 500,
+          color: 'var(--ink-soft)',
+          minHeight: 280,
+        }}
         aria-label={`Scratch notepad for ${dayKey}`}
       />
     </div>
