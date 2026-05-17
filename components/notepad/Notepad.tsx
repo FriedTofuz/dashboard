@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDb } from '@/lib/idb/db';
 import { setDayNotes } from '@/lib/idb/days';
+import { useUiStore } from '@/lib/store/useUiStore';
 import { cn } from '@/lib/utils';
 
 interface NotepadProps {
@@ -16,6 +17,7 @@ interface NotepadProps {
 export function Notepad({ dayKey, userId, className, style }: NotepadProps) {
   const day = useLiveQuery(() => getDb().days.get([userId, dayKey]), [userId, dayKey]);
   const remoteValue = day?.notes ?? '';
+  const openArchive = useUiStore((s) => s.setNotepadArchiveOpen);
 
   const [local, setLocal] = useState(remoteValue);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -64,21 +66,47 @@ export function Notepad({ dayKey, userId, className, style }: NotepadProps) {
       />
 
       <div
-        className="ui-b"
+        className="row items-center justify-between"
         style={{
           position: 'absolute',
           top: 16,
           left: 70,
           right: 18,
-          fontSize: 12,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--ink-faint)',
-          pointerEvents: 'none',
           zIndex: 1,
         }}
       >
-        Scratch notes
+        <span
+          className="ui-b"
+          style={{
+            fontSize: 12,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-faint)',
+            pointerEvents: 'none',
+          }}
+        >
+          Scratch notes
+        </span>
+        <button
+          type="button"
+          onClick={() => openArchive(true)}
+          className="ui hover:bg-paper-warm transition-colors no-print"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontSize: 11,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-faint)',
+            padding: '2px 6px',
+            borderRadius: 3,
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
+          aria-label="Archive scratch notes"
+        >
+          archive…
+        </button>
       </div>
 
       <textarea

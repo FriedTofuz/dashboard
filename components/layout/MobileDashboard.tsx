@@ -6,8 +6,10 @@ import { TopBar } from './TopBar';
 import { RuleOf3Row } from '@/components/tasks/RuleOf3Row';
 import { TaskList } from '@/components/tasks/TaskList';
 import { TaskEditor } from '@/components/tasks/TaskEditor';
+import { CompletionPrompt } from '@/components/tasks/CompletionPrompt';
 import { HabitsSection } from '@/components/tasks/HabitsSection';
 import { HabitTemplatesEditor } from '@/components/tasks/HabitTemplatesEditor';
+import { NotepadArchiveModal } from '@/components/notepad/NotepadArchiveModal';
 import { ProgressCard } from '@/components/stats/ProgressCard';
 import { StatsCard } from '@/components/stats/StatsCard';
 import { FlowerCard } from '@/components/sunflower/FlowerCard';
@@ -70,8 +72,8 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               <RuleOf3Row dayKey={currentDayKey} />
               <HabitsSection dayKey={currentDayKey} />
               <div className="col" style={{ gap: 10 }}>
-                <p className="section-head muted">Other tasks</p>
-                <TaskList dayKey={currentDayKey} kind="open" />
+                <p className="section-head muted">Tasks</p>
+                <TaskList dayKey={currentDayKey} kind="open" showAddRow />
               </div>
               <div className="col" style={{ gap: 10 }}>
                 <p className="section-head sage">Done</p>
@@ -223,6 +225,8 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
 
       <TaskEditor userId={userId} />
       <HabitTemplatesEditor userId={userId} />
+      <CompletionPrompt />
+      <NotepadArchiveModal userId={userId} />
       <CommandPalette userId={userId} />
       <InstallPrompt />
     </div>

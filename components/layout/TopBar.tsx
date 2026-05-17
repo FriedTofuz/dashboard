@@ -1,6 +1,7 @@
 'use client';
 
-import { formatDayLabel, addDays, todayKey } from '@/lib/time/dayKey';
+import { useState } from 'react';
+import { formatDayLabel, addDays, todayKey, toDayKey } from '@/lib/time/dayKey';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { cn } from '@/lib/utils';
 
@@ -9,12 +10,51 @@ function shortWeekday(full: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Parse "M/D/YY", "MM/DD/YYYY", or "M/D" into a YYYY-MM-DD key. Returns null if invalid. */
+function parseSearchDate(input: string): string | null {
+  const t = input.trim();
+  if (!t) return null;
+  const match = t.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/);
+  if (!match) return null;
+  const [, mStr, dStr, yStr] = match;
+  const m = parseInt(mStr, 10);
+  const d = parseInt(dStr, 10);
+  let y: number;
+  if (yStr) {
+    y = parseInt(yStr, 10);
+    if (yStr.length === 2) y += 2000;
+  } else {
+    y = new Date().getFullYear();
+  }
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const date = new Date(y, m - 1, d);
+  if (date.getMonth() !== m - 1 || date.getDate() !== d) return null; // overflow check
+  return toDayKey(date);
+}
+
 export function TopBar() {
   const { currentDayKey, setCurrentDayKey } = useUiStore();
   const today = todayKey();
   const { weekday, monthDay } = formatDayLabel(currentDayKey);
 
-  const days = [-2, -1, 0, 1, 2].map((offset) => addDays(today, offset));
+  // Window of 5 days centered on the selected day (so the user always has
+  // ±2 context when they jump to a date via search or the today button)
+  const days = [-2, -1, 0, 1, 2].map((offset) => addDays(currentDayKey, offset));
+
+  const [search, setSearch] = useState('');
+  const [searchError, setSearchError] = useState(false);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const key = parseSearchDate(search);
+    if (!key) {
+      setSearchError(true);
+      return;
+    }
+    setCurrentDayKey(key);
+    setSearch('');
+    setSearchError(false);
+  }
 
   return (
     <div className="row items-start justify-between mb-1 gap-6 flex-wrap">
@@ -36,48 +76,70 @@ export function TopBar() {
         </h1>
       </div>
 
-      {/* Day range pills */}
-      <div className="row items-center gap-2.5 no-print">
-        <span className="hand" style={{ fontSize: 17, color: 'var(--ink-faint)' }}>
+      {/* Day range pills + reset + search */}
+      <div className="row items-center gap-2.5 no-print flex-wrap">
+        <button
+          type="button"
+          onClick={() => setCurrentDayKey(today)}
+          disabled={currentDayKey === today}
+          className="wobble transition-colors hover:bg-paper-warm disabled:opacity-50"
+          style={{
+            fontFamily: 'var(--font-caveat), cursive',
+            fontWeight: 600,
+            fontSize: 17,
+            color: 'var(--ink-faint)',
+            border: '1.5px solid var(--ink-soft)',
+            borderRadius: 5,
+            padding: '4px 10px 5px',
+            background: 'var(--paper)',
+            cursor: currentDayKey === today ? 'default' : 'pointer',
+          }}
+          aria-label="Reset to today"
+        >
           ← today
-        </span>
+        </button>
+
         <div className="row gap-1.5">
           {days.map((key) => {
-            const isToday = key === today;
             const isSelected = key === currentDayKey;
+            const isToday = key === today;
             const [, , d] = key.split('-');
             const { weekday: w } = formatDayLabel(key);
+
+            // Selected = filled terra. Today (when not selected) gets a faint
+            // terra ring + dot so you can still find it. Others = plain ink.
+            const border = isSelected
+              ? '1.5px solid var(--terra-deep)'
+              : isToday
+                ? '1.5px solid var(--terra)'
+                : '1.5px solid var(--ink)';
+            const background = isSelected ? 'var(--terra)' : 'transparent';
+            const color = isSelected ? 'var(--paper)' : 'var(--ink)';
+
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setCurrentDayKey(key)}
                 aria-current={isSelected ? 'date' : undefined}
-                className={cn(
-                  'wobble transition-colors',
-                  isToday
-                    ? 'date-pill-today'
-                    : 'date-pill',
-                  isSelected && !isToday && 'wash-sage',
-                )}
+                className={cn('wobble transition-colors', !isSelected && 'hover:bg-paper-warm')}
                 style={{
-                  border: isToday
-                    ? '1.5px solid var(--terra-deep)'
-                    : '1.5px solid var(--ink)',
-                  background: isToday ? 'var(--terra)' : 'transparent',
-                  color: isToday ? 'var(--paper)' : 'var(--ink)',
+                  border,
+                  background,
+                  color,
                   borderRadius: 4,
                   padding: '4px 10px 3px',
                   minWidth: 50,
                   textAlign: 'center',
                   cursor: 'pointer',
+                  position: 'relative',
                 }}
               >
                 <span
                   className="tiny"
                   style={{
-                    color: isToday ? 'var(--paper)' : 'var(--ink-faint)',
-                    opacity: isToday ? 0.9 : 1,
+                    color: isSelected ? 'var(--paper)' : 'var(--ink-faint)',
+                    opacity: isSelected ? 0.9 : 1,
                     display: 'block',
                   }}
                 >
@@ -89,10 +151,50 @@ export function TopBar() {
                 >
                   {d}
                 </span>
+                {isToday && !isSelected && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      bottom: 2,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 4,
+                      height: 4,
+                      borderRadius: '50%',
+                      background: 'var(--terra)',
+                    }}
+                  />
+                )}
               </button>
             );
           })}
         </div>
+
+        <form onSubmit={handleSearch}>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (searchError) setSearchError(false);
+            }}
+            placeholder="MM/DD/YYYY"
+            aria-label="Jump to date (month/day/year)"
+            className="wobble ui num"
+            style={{
+              border: `1.5px solid ${searchError ? 'var(--terra-deep)' : 'var(--ink-soft)'}`,
+              borderRadius: 5,
+              padding: '6px 10px',
+              background: 'var(--paper)',
+              color: 'var(--ink)',
+              fontSize: 13,
+              width: 130,
+              outline: 'none',
+            }}
+          />
+        </form>
       </div>
     </div>
   );

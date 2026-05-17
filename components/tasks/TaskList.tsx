@@ -4,14 +4,17 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { getDb } from '@/lib/idb/db';
 import { TaskRow } from './TaskRow';
+import { AddTaskGhostRow } from './AddTaskGhostRow';
 import { todayKey } from '@/lib/time/dayKey';
 
 interface TaskListProps {
   dayKey?: string;
   kind: 'open' | 'done';
+  /** Render a dimmed task-shaped "+ add task" row at the bottom. */
+  showAddRow?: boolean;
 }
 
-export function TaskList({ dayKey = todayKey(), kind }: TaskListProps) {
+export function TaskList({ dayKey = todayKey(), kind, showAddRow = false }: TaskListProps) {
   const tasks = useLiveQuery(
     () =>
       getDb()
@@ -31,15 +34,16 @@ export function TaskList({ dayKey = todayKey(), kind }: TaskListProps) {
 
   if (!tasks || tasks.length === 0) {
     if (kind === 'open') {
-      // §8 — Today list, all clear
       return (
-        <div className="empty-state">
-          <span className="headline">all clear ✿</span>
-          <span className="sub">the sunflower&apos;s having a great day</span>
-        </div>
+        <>
+          <div className="empty-state">
+            <span className="headline">all clear ✿</span>
+            <span className="sub">the sunflower&apos;s having a great day</span>
+          </div>
+          {showAddRow && <AddTaskGhostRow />}
+        </>
       );
     }
-    // §8 — Done list, nothing finished yet
     return (
       <div className="empty-state">
         <span className="headline">nothing finished yet</span>
@@ -56,6 +60,7 @@ export function TaskList({ dayKey = todayKey(), kind }: TaskListProps) {
         {tasks.map((task, i) => (
           <TaskRow key={task.id} task={task} index={i} showNumber={kind === 'open'} />
         ))}
+        {showAddRow && <AddTaskGhostRow />}
       </div>
     </SortableContext>
   );
