@@ -26,6 +26,13 @@ interface UiState {
   habitsEditorOpen: boolean;
   setHabitsEditorOpen: (open: boolean) => void;
 
+  labelsManagerOpen: boolean;
+  setLabelsManagerOpen: (open: boolean) => void;
+
+  /** Day-view filter: when set, only tasks with this label show in TaskList. */
+  dayLabelFilter: string | null;
+  setDayLabelFilter: (id: string | null) => void;
+
   notepadArchiveOpen: boolean;
   setNotepadArchiveOpen: (open: boolean) => void;
 
@@ -60,6 +67,12 @@ export const useUiStore = create<UiState>()((set) => ({
 
   habitsEditorOpen: false,
   setHabitsEditorOpen: (open) => set({ habitsEditorOpen: open }),
+
+  labelsManagerOpen: false,
+  setLabelsManagerOpen: (open) => set({ labelsManagerOpen: open }),
+
+  dayLabelFilter: null,
+  setDayLabelFilter: (id) => set({ dayLabelFilter: id }),
 
   notepadArchiveOpen: false,
   setNotepadArchiveOpen: (open) => set({ notepadArchiveOpen: open }),

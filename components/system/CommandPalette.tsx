@@ -26,6 +26,8 @@ export function CommandPalette({ userId }: Props) {
   const setOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const openEditor = useUiStore((s) => s.openEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
+  const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
+  const setDayLabelFilter = useUiStore((s) => s.setDayLabelFilter);
   const setView = useUiStore((s) => s.setView);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
 
@@ -45,6 +47,12 @@ export function CommandPalette({ userId }: Props) {
     [],
   );
 
+  const labels = useLiveQuery(
+    () => getDb().labels.where('user_id').equals(userId).sortBy('name'),
+    [userId],
+    [],
+  );
+
   useEffect(() => {
     if (open) {
       setQ('');
@@ -56,6 +64,7 @@ export function CommandPalette({ userId }: Props) {
   const builtin: Cmd[] = [
     { id: 'new-task', label: 'new task', hint: 'n', action: () => openEditor() },
     { id: 'habits', label: 'manage habits', action: () => setHabitsEditorOpen(true) },
+    { id: 'labels', label: 'manage labels', action: () => setLabelsManagerOpen(true) },
     { id: 'view-today', label: 'go to today', action: () => { setView('today'); setCurrentDayKey(todayKey()); } },
     { id: 'view-range', label: 'range view', action: () => setView('range') },
     { id: 'view-archive', label: 'archive', action: () => setView('archive') },
@@ -106,7 +115,24 @@ export function CommandPalette({ userId }: Props) {
             action: () => void startTimer(t.id),
           }));
 
-  const cmds = [...filteredBuiltin, ...filteredTasks];
+  // Label-prefix search: type "#homework" to jump to that label's archive view.
+  const labelCmds =
+    ql.length === 0
+      ? []
+      : (labels ?? [])
+          .filter((l) => {
+            const needle = ql.startsWith('#') ? ql.slice(1) : ql;
+            return l.name.toLowerCase().includes(needle);
+          })
+          .slice(0, 6)
+          .map((l) => ({
+            id: `label-${l.id}`,
+            label: `# ${l.name}`,
+            hint: 'filter today',
+            action: () => { setDayLabelFilter(l.id); setView('today'); setCurrentDayKey(todayKey()); },
+          }));
+
+  const cmds = [...filteredBuiltin, ...labelCmds, ...filteredTasks];
   const clampedSel = Math.min(sel, Math.max(0, cmds.length - 1));
 
   function run(c: Cmd) {

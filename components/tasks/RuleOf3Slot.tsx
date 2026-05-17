@@ -86,10 +86,19 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
           <span className="tiny" style={{ opacity: 0.7 }}>—</span>
         </div>
         <div>
-          <p className="hand" style={{ fontSize: 22, color: 'var(--ink)', lineHeight: 1.15 }}>
-            {droppable.isOver ? 'drop here' : 'what matters most?'}
-          </p>
-          <p className="ui" style={{ fontSize: 13, color: 'var(--ink-faint)', marginTop: 2 }}>
+          {(droppable.isOver || slot === 1) && (
+            <p className="hand" style={{ fontSize: 20, color: 'var(--ink)', lineHeight: 1.15 }}>
+              {droppable.isOver ? 'drop here' : 'what matters most?'}
+            </p>
+          )}
+          <p
+            className="ui"
+            style={{
+              fontSize: 13,
+              color: 'var(--ink-faint)',
+              marginTop: droppable.isOver || slot === 1 ? 2 : 0,
+            }}
+          >
             tap to set · keep it to 3
           </p>
         </div>
@@ -172,7 +181,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
         <span
           className={cn('hand', task.state === 'done' && 'strike')}
           style={{
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: 600,
             lineHeight: 1.1,
             color: task.state === 'done' ? 'var(--ink-faint)' : 'var(--ink)',

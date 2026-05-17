@@ -59,7 +59,7 @@ export function CompletionPrompt() {
           <span className="tiny">marking done</span>
           <h2
             className="hand"
-            style={{ fontSize: 26, lineHeight: 1.1, fontWeight: 700, margin: 0 }}
+            style={{ fontSize: 23, lineHeight: 1.1, fontWeight: 600, margin: 0 }}
           >
             {task?.title ?? '…'}
           </h2>
