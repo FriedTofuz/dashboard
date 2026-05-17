@@ -74,7 +74,8 @@ export function ManageLabelsModal({ userId }: Props) {
       onClick={() => setOpen(false)}
     >
       <div
-        className="ink-box paper rounded-card p-6 max-w-md w-full col gap-4 max-h-[80vh] overflow-y-auto"
+        className="ink-box-soft paper rounded-card p-7 w-full col gap-4 max-h-[85vh] overflow-y-auto"
+        style={{ maxWidth: 640 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row items-center justify-between">

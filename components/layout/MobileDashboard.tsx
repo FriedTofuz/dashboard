@@ -13,8 +13,11 @@ import { NotepadArchiveModal } from '@/components/notepad/NotepadArchiveModal';
 import { ConfirmDialog } from '@/components/system/ConfirmDialog';
 import { ProgressCard } from '@/components/stats/ProgressCard';
 import { StatsCard } from '@/components/stats/StatsCard';
+import { StatsActionRow } from '@/components/stats/StatsActionRow';
 import { FlowerCard } from '@/components/sunflower/FlowerCard';
 import { Notepad } from '@/components/notepad/Notepad';
+import { ScratchModal } from '@/components/notepad/ScratchModal';
+import { MoveTaskDialog } from '@/components/system/MoveTaskDialog';
 import { TimerProvider } from '@/components/timer/TimerProvider';
 import { BootProvider } from '@/components/system/BootProvider';
 import { DndProvider } from '@/components/dnd/DndProvider';
@@ -73,7 +76,6 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               <TopBar />
               <ProgressCard dayKey={currentDayKey} deficitSeconds={deficitSeconds} />
               <RuleOf3Row dayKey={currentDayKey} />
-              <HabitsSection dayKey={currentDayKey} />
               <div className="col" style={{ gap: 10 }}>
                 <div className="row items-center justify-between" style={{ gap: 12, flexWrap: 'wrap' }}>
                   <p className="section-head muted">Tasks</p>
@@ -81,6 +83,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
                 </div>
                 <TaskList dayKey={currentDayKey} showAddRow />
               </div>
+              <HabitsSection dayKey={currentDayKey} />
               <div className="row" style={{ gap: 12, paddingTop: 4 }}>
                 <ThemeToggle />
               </div>
@@ -118,6 +121,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
                 dayKey={currentDayKey}
                 userId={userId}
               />
+              <StatsActionRow />
               <StatsCard
                 userId={userId}
                 dayKey={currentDayKey}
@@ -229,6 +233,8 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <HabitTemplatesEditor userId={userId} />
       <CompletionPrompt />
       <NotepadArchiveModal userId={userId} />
+      <ScratchModal dayKey={currentDayKey} userId={userId} />
+      <MoveTaskDialog />
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <ManageLabelsModal userId={userId} />

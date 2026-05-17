@@ -48,16 +48,16 @@ export function LabelPicker({ selected, onChange, userId }: Props) {
         className="row items-center hover:bg-paper-warm transition-colors"
         style={{
           border: '1.5px solid var(--ink-soft)',
-          borderRadius: 5,
-          padding: '6px 10px',
+          borderRadius: 6,
+          padding: '8px 12px',
           background: 'var(--paper)',
           cursor: 'pointer',
           gap: 6,
           flexWrap: 'wrap',
-          minHeight: 32,
+          minHeight: 38,
           width: '100%',
           fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
-          fontSize: 13,
+          fontSize: 14,
           color: 'var(--ink)',
           textAlign: 'left',
         }}
@@ -94,15 +94,18 @@ export function LabelPicker({ selected, onChange, userId }: Props) {
             position: 'absolute',
             top: '100%',
             left: 0,
-            right: 0,
             marginTop: 4,
             border: '1.5px solid var(--ink-soft)',
             borderRadius: 6,
-            padding: 4,
+            padding: 6,
             boxShadow: 'var(--shadow)',
             zIndex: 30,
-            maxHeight: 240,
+            maxHeight: 360,
             overflowY: 'auto',
+            overflowX: 'hidden',
+            minWidth: 360,
+            width: 'max-content',
+            maxWidth: 'min(540px, calc(100vw - 48px))',
           }}
         >
           {(labels ?? []).length === 0 ? (
