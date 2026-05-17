@@ -6,6 +6,7 @@ import { getDb } from '@/lib/idb/db';
 import { startTimer } from '@/lib/idb/tasks';
 import { enablePushNotifications, disablePushNotifications } from '@/lib/pwa/push';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { toast, toastSuccess, toastWarn } from '@/lib/store/useToastStore';
 import { todayKey } from '@/lib/time/dayKey';
 import { cn } from '@/lib/utils';
 
@@ -63,7 +64,8 @@ export function CommandPalette({ userId }: Props) {
       label: 'enable push notifications',
       action: async () => {
         const result = await enablePushNotifications();
-        alert(result.ok ? 'notifications enabled' : `failed: ${result.reason}`);
+        if (result.ok) toastSuccess('daily reminders enabled');
+        else toastWarn(`couldn’t enable: ${result.reason}`);
       },
     },
     {
@@ -71,7 +73,7 @@ export function CommandPalette({ userId }: Props) {
       label: 'disable push notifications',
       action: async () => {
         await disablePushNotifications();
-        alert('notifications disabled');
+        toast('daily reminders off');
       },
     },
     {

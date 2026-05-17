@@ -27,7 +27,7 @@ const config: Config = {
         'ochre-wash': 'var(--ochre-wash)',
       },
       fontFamily: {
-        hand: ['var(--font-caveat)', 'cursive'],
+        hand: ['var(--font-hand)', 'cursive'],
         ui: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'ui-monospace', 'monospace'],
         // legacy alias — kept so any leftover usage still resolves to DM Sans

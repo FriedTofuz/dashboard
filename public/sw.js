@@ -58,9 +58,9 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Web Push handler — server posts JSON { title, body, url? }
+// Web Push handler — server posts JSON { title, body, url?, icon?, badge?, tag? }
 self.addEventListener('push', (event) => {
-  let data = { title: 'Sunflower', body: 'check in on your day' };
+  let data = { title: '✿ Sunflower', body: 'water me — what are today\'s three?' };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -69,9 +69,11 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/icons/icon-192.svg',
-      badge: '/icons/icon-192.svg',
-      tag: 'sunflower-reminder',
+      icon: data.icon ?? '/icons/icon-192.svg',
+      badge: data.badge ?? '/icons/icon-192.svg',
+      tag: data.tag ?? 'sunflower-daily',
+      // Sage as the OS-level accent (Android, Chrome desktop).
+      vibrate: [120, 60, 120],
       data: { url: data.url ?? '/' },
     }),
   );

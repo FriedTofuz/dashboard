@@ -89,7 +89,6 @@
     background: var(--paper);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
-    font-feature-settings: 'ss01';
   }
 
   * {
@@ -106,8 +105,8 @@
 /* ============================================================
    Typography helpers
    ============================================================ */
-.hand   { font-family: var(--font-caveat), cursive; font-weight: 600; }
-.hand-b { font-family: var(--font-caveat), cursive; font-weight: 700; }
+.hand   { font-family: var(--font-hand), cursive; font-weight: 600; }
+.hand-b { font-family: var(--font-hand), cursive; font-weight: 700; }
 .ui     { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; }
 .ui-b   { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; }
 .mono   {
@@ -147,7 +146,7 @@
 
 /* §1.2 task-label — Caveat 22, for user-voice content */
 .task-label {
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-hand), cursive;
   font-weight: 600;
   font-size: 22px;
   line-height: 1.15;
@@ -310,7 +309,7 @@
   content: '✓';
   position: absolute;
   inset: 0;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-hand), cursive;
   font-size: 20px;
   line-height: 16px;
   color: var(--paper);
@@ -331,6 +330,11 @@
 @keyframes pulse {
   0%, 100% { opacity: 0.55; transform: scale(0.85); }
   50%       { opacity: 1;    transform: scale(1); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Reduced motion: disable pulse, instant transitions */
@@ -390,7 +394,10 @@
     var(--sage) 0 6px,
     var(--sage-deep) 6px 7px
   );
-  border-radius: 6px;
+  /* The outer .bar's overflow:hidden + 8px radius already shapes the visible
+     edges. Internal radius here would create a visible seam where the fill
+     ends against the cap (the "dash" artifact). */
+  border-radius: 0;
   transition: width 400ms ease-out;
 }
 .bar > .bar-fill.over {
@@ -403,8 +410,8 @@
 .bar > .bar-cap {
   position: absolute;
   inset: 2px auto 2px 2px;
-  background: rgba(107,138,92,0.15);
-  border-radius: 6px;
+  background: rgba(107, 138, 92, 0.15);
+  border-radius: 0;
 }
 
 /* ============================================================
@@ -463,7 +470,7 @@
   line-height: 1.4;
 }
 .section-head .sub {
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-hand), cursive;
   font-weight: 500;
   font-size: 17px;
   color: var(--ink-faint);
@@ -482,7 +489,7 @@
    Misc
    ============================================================ */
 .annot {
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-hand), cursive;
   color: var(--terra-deep);
   font-size: 17px;
 }
@@ -497,7 +504,7 @@
   color: var(--ink-faint);
 }
 .empty-state .headline {
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-hand), cursive;
   font-weight: 600;
   font-size: 24px;
   color: var(--ink);

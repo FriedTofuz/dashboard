@@ -6,23 +6,35 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import {
-  setR3Slot,
   startTimer,
   pauseTimer,
   uncompleteTask,
   deleteTask,
   duplicateTask,
   moveTaskToDay,
+  createTask,
 } from '@/lib/idb/tasks';
-import { elapsedLabel, addDays } from '@/lib/time/dayKey';
+import { elapsedLabel, addDays, formatDayLabel } from '@/lib/time/dayKey';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
+import { toast, toastSuccess } from '@/lib/store/useToastStore';
 import type { Task } from '@/lib/idb/db';
 
 interface RuleOf3SlotProps {
   slot: 1 | 2 | 3;
   task?: Task;
   dayKey: string;
+}
+
+/** Format the done-meta as "✓ Done · −3m" / "✓ Done · +2m" / "✓ Done". */
+function formatDoneDelta(estMinutes: number, actualMs: number | null): string {
+  if (actualMs == null) return '✓ Done';
+  const actualMin = Math.round(actualMs / 60000);
+  const delta = actualMin - estMinutes;
+  if (delta === 0) return '✓ Done · on time';
+  const sign = delta > 0 ? '+' : '−';
+  return `✓ Done · ${sign}${Math.abs(delta)}m`;
 }
 
 export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
@@ -56,13 +68,17 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       <div
         ref={droppable.setNodeRef}
         className={cn(
-          'ink-box-dashed rounded-card transition-colors flex-1 col justify-between',
+          'rounded-card transition-colors flex-1 col justify-between wobble',
           droppable.isOver && 'wash-sage',
         )}
         style={{
           minHeight: 132,
           padding: '16px 18px 14px',
           background: droppable.isOver ? undefined : 'transparent',
+          border: droppable.isOver
+            ? '1.6px solid var(--sage-deep)'
+            : '1.5px dashed var(--ink-faint)',
+          borderRadius: 4,
         }}
       >
         <div className="row items-center justify-between">
@@ -81,15 +97,38 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
     );
   }
 
+  const isDropTarget = droppable.isOver && !sortable.isDragging;
+
   const cardStyle: React.CSSProperties = {
     minHeight: 132,
     padding: '16px 18px 14px',
     background: 'var(--sage-wash)',
-    border: '1.6px solid var(--ink)',
+    border: isDropTarget
+      ? '2px solid var(--sage-deep)'
+      : '1.6px solid var(--ink)',
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
-    opacity: sortable.isDragging ? 0.4 : 1,
+    // Hide the original card entirely while dragging; DragOverlay shows the
+    // visual proxy at the cursor instead.
+    opacity: sortable.isDragging ? 0 : 1,
   };
+
+  // Build the top-right meta string per state.
+  const metaText =
+    task.state === 'done'
+      ? formatDoneDelta(task.est_minutes, task.actual_ms)
+      : isRunning
+        ? `▸ ${elapsedLabel(elapsed)} / ${task.est_minutes}m`
+        : `${task.est_minutes}m`;
+
+  const metaColor =
+    task.state === 'done'
+      ? 'var(--sage-deep)'
+      : isRunning
+        ? 'var(--terra-deep)'
+        : 'var(--ink-faint)';
+
+  const metaIsUiFont = task.state === 'done';
 
   return (
     <div
@@ -97,7 +136,6 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       {...sortable.attributes}
       className={cn(
         'rounded-card relative transition-colors flex-1 col justify-between wobble group',
-        droppable.isOver && 'wash-sage',
       )}
       style={cardStyle}
       onDoubleClick={() => openEditor(task.id)}
@@ -109,27 +147,18 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
         <span
           className="num"
           style={{
-            color:
-              task.state === 'done'
-                ? 'var(--sage-deep)'
-                : isRunning
-                  ? 'var(--terra-deep)'
-                  : 'var(--ink-faint)',
-            fontWeight: task.state === 'done' ? 600 : 500,
-            fontFamily:
-              task.state === 'done'
-                ? 'var(--font-dm-sans), system-ui, sans-serif'
-                : 'var(--font-jetbrains-mono), ui-monospace, monospace',
-            fontSize: task.state === 'done' ? 12 : 11,
-            letterSpacing: task.state === 'done' ? '0.08em' : '0.02em',
-            textTransform: task.state === 'done' ? 'uppercase' : 'none',
+            color: metaColor,
+            fontWeight: metaIsUiFont ? 600 : 500,
+            fontFamily: metaIsUiFont
+              ? 'var(--font-dm-sans), system-ui, sans-serif'
+              : 'var(--font-jetbrains-mono), ui-monospace, monospace',
+            fontSize: metaIsUiFont ? 12 : 11,
+            letterSpacing: metaIsUiFont ? '0.08em' : '0.02em',
+            textTransform: metaIsUiFont ? 'uppercase' : 'none',
+            whiteSpace: 'nowrap',
           }}
         >
-          {task.state === 'done'
-            ? '✓ done'
-            : isRunning
-              ? `▸ ${elapsedLabel(elapsed)} / ${task.est_minutes}m`
-              : `${task.est_minutes}m`}
+          {metaText}
         </span>
       </div>
 
@@ -152,21 +181,6 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
         >
           {task.title}
         </span>
-
-        <p
-          className="hand"
-          style={{ fontSize: 15, color: 'var(--ink-faint)', lineHeight: 1.2, margin: '4px 0 0' }}
-        >
-          {task.state === 'done' && task.actual_ms != null
-            ? `finished ${Math.round(task.actual_ms / 60000)}min${
-                task.actual_ms < task.est_minutes * 60000
-                  ? ` · ${task.est_minutes - Math.round(task.actual_ms / 60000)}min under`
-                  : ''
-              }`
-            : isRunning
-              ? `running · ${task.est_minutes}min est.`
-              : `open · ${task.est_minutes}min est.`}
-        </p>
 
         {task.description && (
           <p
@@ -199,10 +213,10 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
         )}
       </div>
 
-      {/* Action row — hover-revealed buttons in the top-right corner */}
+      {/* Action row — pinned to bottom-right, larger icons */}
       <div
         className="row absolute opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
-        style={{ top: 6, right: 8, gap: 4 }}
+        style={{ bottom: 8, right: 10, gap: 4 }}
       >
         {task.state !== 'done' && (
           <button
@@ -218,12 +232,16 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
               border: 'none',
               background: 'transparent',
               color: isRunning ? 'var(--terra-deep)' : 'var(--ink-faint)',
-              fontSize: 11,
-              padding: '2px 4px',
-              borderRadius: 3,
+              fontSize: 16,
+              lineHeight: 1,
+              padding: '4px 8px',
+              borderRadius: 4,
               cursor: 'pointer',
+              minWidth: 28,
+              minHeight: 28,
             }}
             aria-label={isRunning ? 'Pause timer' : 'Start timer'}
+            title={isRunning ? 'Pause timer' : 'Start timer'}
           >
             {isRunning ? '⏸' : '▸'}
           </button>
@@ -242,12 +260,16 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
             border: 'none',
             background: 'transparent',
             color: 'var(--sage-deep)',
-            fontSize: 12,
-            padding: '2px 4px',
-            borderRadius: 3,
+            fontSize: 17,
+            lineHeight: 1,
+            padding: '4px 8px',
+            borderRadius: 4,
             cursor: 'pointer',
+            minWidth: 28,
+            minHeight: 28,
           }}
           aria-label={task.state === 'done' ? 'Mark incomplete' : 'Mark complete'}
+          title={task.state === 'done' ? 'Mark incomplete' : 'Mark complete'}
         >
           {task.state === 'done' ? '↺' : '✓'}
         </button>
@@ -265,7 +287,7 @@ interface R3SlotMenuProps {
   dayKey: string;
 }
 
-function R3SlotMenu({ task, dayKey }: Omit<R3SlotMenuProps, 'slot'>) {
+function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const openEditor = useUiStore((s) => s.openEditor);
@@ -279,6 +301,60 @@ function R3SlotMenu({ task, dayKey }: Omit<R3SlotMenuProps, 'slot'>) {
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
+  async function handleDelete() {
+    setOpen(false);
+    const ok = await themedConfirm({
+      title: `delete "${task.title}"?`,
+      body: 'this can\'t be undone.',
+      confirmLabel: 'delete',
+      cancelLabel: 'keep it',
+      danger: true,
+    });
+    if (!ok) return;
+    const snapshot = { ...task };
+    await deleteTask(task.id);
+    toast(`deleted "${task.title}"`, {
+      action: {
+        label: 'undo',
+        onAction: () => {
+          void createTask(
+            {
+              day_key: snapshot.day_key,
+              template_id: snapshot.template_id,
+              title: snapshot.title,
+              description: snapshot.description,
+              est_minutes: snapshot.est_minutes,
+              state: snapshot.state,
+              started_at: null,
+              elapsed_ms: snapshot.elapsed_ms,
+              actual_ms: snapshot.actual_ms,
+              completed_at: snapshot.completed_at,
+              completion_note: snapshot.completion_note,
+              r3_slot: snapshot.r3_slot,
+              sort_order: snapshot.sort_order,
+              skipped: snapshot.skipped,
+              archived: snapshot.archived,
+            },
+            snapshot.user_id,
+          );
+        },
+      },
+    });
+  }
+
+  async function handlePushTomorrow() {
+    setOpen(false);
+    const target = addDays(dayKey, 1);
+    await moveTaskToDay(task.id, target);
+    const { monthDay } = formatDayLabel(target);
+    toast(`pushed to ${monthDay}`, {
+      action: {
+        label: 'undo',
+        onAction: () => { void moveTaskToDay(task.id, dayKey); },
+      },
+    });
+  }
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
@@ -290,11 +366,13 @@ function R3SlotMenu({ task, dayKey }: Omit<R3SlotMenuProps, 'slot'>) {
           border: 'none',
           background: 'transparent',
           color: 'var(--ink-faint)',
-          fontSize: 14,
-          padding: '0 4px',
-          borderRadius: 3,
-          cursor: 'pointer',
+          fontSize: 18,
           lineHeight: 1,
+          padding: '4px 8px',
+          borderRadius: 4,
+          cursor: 'pointer',
+          minWidth: 28,
+          minHeight: 28,
         }}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -306,12 +384,11 @@ function R3SlotMenu({ task, dayKey }: Omit<R3SlotMenuProps, 'slot'>) {
       {open && (
         <div
           role="menu"
-          className="wobble"
           style={{
             position: 'absolute',
-            top: '100%',
+            bottom: '100%',
             right: 0,
-            marginTop: 4,
+            marginBottom: 6,
             background: 'var(--paper)',
             border: '1.5px solid var(--ink-soft)',
             borderRadius: 6,
@@ -326,30 +403,19 @@ function R3SlotMenu({ task, dayKey }: Omit<R3SlotMenuProps, 'slot'>) {
           <SlotMenuItem onClick={() => { setOpen(false); openEditor(task.id); }}>
             edit
           </SlotMenuItem>
-          <SlotMenuItem onClick={() => { setOpen(false); void duplicateTask(task.id); }}>
-            duplicate
-          </SlotMenuItem>
-          <SlotMenuItem onClick={() => { setOpen(false); void setR3Slot(task.id, null, dayKey); }}>
-            remove from rule of 3
-          </SlotMenuItem>
           <SlotMenuItem
             onClick={() => {
               setOpen(false);
-              void moveTaskToDay(task.id, addDays(dayKey, 1));
+              void duplicateTask(task.id).then(() => toastSuccess('duplicated'));
             }}
           >
+            duplicate
+          </SlotMenuItem>
+          <SlotMenuItem onClick={handlePushTomorrow}>
             push to tomorrow
           </SlotMenuItem>
           <div style={{ height: 1, background: 'var(--rule)', margin: '4px 0' }} />
-          <SlotMenuItem
-            danger
-            onClick={() => {
-              setOpen(false);
-              if (confirm(`Delete "${task.title}"? This can't be undone.`)) {
-                void deleteTask(task.id);
-              }
-            }}
-          >
+          <SlotMenuItem danger onClick={handleDelete}>
             delete
           </SlotMenuItem>
         </div>
@@ -384,4 +450,3 @@ function SlotMenuItem({
     </button>
   );
 }
-

@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { HandCheckbox } from '@/components/ui/HandCheckbox';
-import { elapsedLabel, addDays } from '@/lib/time/dayKey';
+import { elapsedLabel, addDays, formatDayLabel } from '@/lib/time/dayKey';
 import {
   uncompleteTask,
   startTimer,
@@ -15,9 +15,12 @@ import {
   duplicateTask,
   moveTaskToDay,
   updateTask,
+  createTask,
 } from '@/lib/idb/tasks';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
+import { toast, toastSuccess } from '@/lib/store/useToastStore';
 import type { Task } from '@/lib/idb/db';
 
 interface TaskRowProps {
@@ -318,19 +321,64 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
 
   async function handleDelete() {
     close();
-    if (confirm(`Delete "${task.title}"? This can't be undone.`)) {
-      await deleteTask(task.id);
-    }
+    const ok = await themedConfirm({
+      title: `delete "${task.title}"?`,
+      body: 'this can\'t be undone.',
+      confirmLabel: 'delete',
+      cancelLabel: 'keep it',
+      danger: true,
+    });
+    if (!ok) return;
+    const snapshot = { ...task };
+    await deleteTask(task.id);
+    toast(`deleted "${task.title}"`, {
+      action: {
+        label: 'undo',
+        onAction: () => {
+          void createTask(
+            {
+              day_key: snapshot.day_key,
+              template_id: snapshot.template_id,
+              title: snapshot.title,
+              description: snapshot.description,
+              est_minutes: snapshot.est_minutes,
+              state: snapshot.state,
+              started_at: null,
+              elapsed_ms: snapshot.elapsed_ms,
+              actual_ms: snapshot.actual_ms,
+              completed_at: snapshot.completed_at,
+              completion_note: snapshot.completion_note,
+              r3_slot: snapshot.r3_slot,
+              sort_order: snapshot.sort_order,
+              skipped: snapshot.skipped,
+              archived: snapshot.archived,
+            },
+            snapshot.user_id,
+          );
+        },
+      },
+    });
   }
 
   async function handleDuplicate() {
     close();
     await duplicateTask(task.id);
+    toastSuccess('duplicated');
   }
 
   async function handleMoveTo(dayKey: string) {
     close();
+    const fromDayKey = task.day_key;
     await moveTaskToDay(task.id, dayKey);
+    const { monthDay } = formatDayLabel(dayKey);
+    toast(`moved to ${monthDay}`, {
+      action: fromDayKey
+        ? {
+            label: 'undo',
+            onAction: () => { void moveTaskToDay(task.id, fromDayKey); },
+          }
+        : undefined,
+    });
   }
 
   const today = task.day_key ?? '';
@@ -372,7 +420,6 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
       {open && (
         <div
           role="menu"
-          className="wobble"
           style={{
             position: 'absolute',
             top: '100%',
