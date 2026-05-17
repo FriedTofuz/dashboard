@@ -105,8 +105,8 @@
 /* ============================================================
    Typography helpers
    ============================================================ */
-.hand   { font-family: var(--font-hand), cursive; font-weight: 600; }
-.hand-b { font-family: var(--font-hand), cursive; font-weight: 700; }
+.hand   { font-family: var(--font-hand), cursive; font-weight: 500; }
+.hand-b { font-family: var(--font-hand), cursive; font-weight: 600; }
 .ui     { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; }
 .ui-b   { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; }
 .mono   {
@@ -144,11 +144,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* §1.2 task-label — Caveat 22, for user-voice content */
+/* §1.2 task-label — Shantell handwritten, dialed down from v1 weight/size */
 .task-label {
   font-family: var(--font-hand), cursive;
-  font-weight: 600;
-  font-size: 22px;
+  font-weight: 500;
+  font-size: 20px;
   line-height: 1.15;
   color: var(--ink);
 }
@@ -376,29 +376,39 @@
 
 /* ============================================================
    Progress bar (sketched) — sage default, ochre when >100
+   Note: wobble filter intentionally omitted. feDisplacementMap rasterises in
+   layer space, so at fractional browser zoom the displacement amount no
+   longer matches CSS pixels, which produced visible "dash" seams between
+   .bar-fill and .bar-cap at zoom != 100%.
    ============================================================ */
 .bar {
   position: relative;
   height: 14px;
   border: 1.4px solid var(--ink);
   border-radius: 8px;
-  filter: url(#wobble);
   background: var(--paper);
   overflow: hidden;
+  /* Force own compositing layer — stabilises sub-pixel alignment of the
+     stripe gradient at fractional zoom. */
+  transform: translateZ(0);
+}
+.bar > .bar-fill,
+.bar > .bar-cap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 0;
 }
 .bar > .bar-fill {
-  position: absolute;
-  inset: 2px auto 2px 2px;
   background: repeating-linear-gradient(
     45deg,
     var(--sage) 0 6px,
     var(--sage-deep) 6px 7px
   );
-  /* The outer .bar's overflow:hidden + 8px radius already shapes the visible
-     edges. Internal radius here would create a visible seam where the fill
-     ends against the cap (the "dash" artifact). */
-  border-radius: 0;
   transition: width 400ms ease-out;
+  /* Sits above the cap track. */
+  z-index: 2;
 }
 .bar > .bar-fill.over {
   background: repeating-linear-gradient(
@@ -408,10 +418,8 @@
   );
 }
 .bar > .bar-cap {
-  position: absolute;
-  inset: 2px auto 2px 2px;
   background: rgba(107, 138, 92, 0.15);
-  border-radius: 0;
+  z-index: 1;
 }
 
 /* ============================================================
@@ -505,8 +513,8 @@
 }
 .empty-state .headline {
   font-family: var(--font-hand), cursive;
-  font-weight: 600;
-  font-size: 24px;
+  font-weight: 500;
+  font-size: 22px;
   color: var(--ink);
   display: block;
   margin-bottom: 4px;

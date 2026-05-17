@@ -29,7 +29,14 @@ export async function updateTask(id: string, changes: Partial<Task>): Promise<vo
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  await getDb().tasks.delete(id);
+  const db = getDb();
+  // Clean up any label assignments locally; Supabase cascade handles the
+  // remote side via the FK constraint.
+  const links = await db.task_labels.where('task_id').equals(id).toArray();
+  for (const link of links) {
+    await db.task_labels.delete(link.id);
+  }
+  await db.tasks.delete(id);
   enqueue('delete', 'tasks', id, null);
 }
 
@@ -241,24 +248,25 @@ export async function skipTask(taskId: string, skipped = true): Promise<void> {
 
 function taskToRemote(t: Task): Record<string, unknown> {
   return {
-    id:              t.id,
-    user_id:         t.user_id,
-    day_key:         t.day_key,
-    template_id:     t.template_id,
-    title:           t.title,
-    description:     t.description ?? null,
-    est_minutes:     t.est_minutes,
-    state:           t.state,
-    started_at:      t.started_at ? new Date(t.started_at).toISOString() : null,
-    elapsed_ms:      t.elapsed_ms,
-    actual_ms:       t.actual_ms,
-    completed_at:    t.completed_at ? new Date(t.completed_at).toISOString() : null,
-    completion_note: t.completion_note ?? null,
-    r3_slot:         t.r3_slot,
-    sort_order:      t.sort_order,
-    skipped:         t.skipped,
-    archived:        t.archived,
-    created_at:      new Date(t.created_at).toISOString(),
-    updated_at:      new Date(t.updated_at).toISOString(),
+    id:               t.id,
+    user_id:          t.user_id,
+    day_key:          t.day_key,
+    template_id:      t.template_id,
+    title:            t.title,
+    description:      t.description ?? null,
+    est_minutes:      t.est_minutes,
+    state:            t.state,
+    started_at:       t.started_at ? new Date(t.started_at).toISOString() : null,
+    elapsed_ms:       t.elapsed_ms,
+    actual_ms:        t.actual_ms,
+    completed_at:     t.completed_at ? new Date(t.completed_at).toISOString() : null,
+    completion_note:  t.completion_note ?? null,
+    r3_slot:          t.r3_slot,
+    sort_order:       t.sort_order,
+    skipped:          t.skipped,
+    archived:         t.archived,
+    workout_progress: t.workout_progress ?? null,
+    created_at:       new Date(t.created_at).toISOString(),
+    updated_at:       new Date(t.updated_at).toISOString(),
   };
 }

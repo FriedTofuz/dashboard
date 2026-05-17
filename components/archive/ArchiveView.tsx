@@ -9,6 +9,7 @@ import { toast } from '@/lib/store/useToastStore';
 import { deleteTask, createTask } from '@/lib/idb/tasks';
 import { cn } from '@/lib/utils';
 import { formatDayLabel } from '@/lib/time/dayKey';
+import { LabelChips } from '@/components/labels/LabelChips';
 
 interface Props {
   userId: string;
@@ -30,15 +31,40 @@ export function ArchiveView({ userId }: Props) {
   const [q, setQ] = useState('');
   const [filterYear, setFilterYear] = useState<number | 'all'>('all');
   const [filterMonth, setFilterMonth] = useState<number | 'all'>('all');
+  const [filterLabel, setFilterLabel] = useState<string | 'all'>('all');
   const setView = useUiStore((s) => s.setView);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
   const openEditor = useUiStore((s) => s.openEditor);
+  const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
 
   const allTasks = useLiveQuery(
     () => getDb().tasks.where('user_id').equals(userId).toArray(),
     [userId],
     [],
   );
+
+  const labels = useLiveQuery(
+    () => getDb().labels.where('user_id').equals(userId).sortBy('name'),
+    [userId],
+    [],
+  );
+
+  const taskLabels = useLiveQuery(
+    () => getDb().task_labels.where('user_id').equals(userId).toArray(),
+    [userId],
+    [],
+  );
+
+  // Map task_id -> Set<label_id> for fast filtering.
+  const taskIdToLabelIds = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const tl of taskLabels ?? []) {
+      let s = m.get(tl.task_id);
+      if (!s) { s = new Set(); m.set(tl.task_id, s); }
+      s.add(tl.label_id);
+    }
+    return m;
+  }, [taskLabels]);
 
   const pages = useLiveQuery(
     () => getDb().notepad_pages.where('user_id').equals(userId).toArray(),
@@ -79,21 +105,28 @@ export function ArchiveView({ userId }: Props) {
     };
   }, [allTasks]);
 
-  // Filter tasks by year/month + search query
+  // Filter tasks by year/month/label + search query
   const matchingTasks = useMemo(() => {
+    const labelMatch = (t: Task) => {
+      if (filterLabel === 'all') return true;
+      return taskIdToLabelIds.get(t.id)?.has(filterLabel) ?? false;
+    };
     const list = (allTasks ?? []).filter((t) => {
       const ym = dayKeyToYearMonth(t.day_key);
       if (filterYear !== 'all' && (!ym || ym.year !== filterYear)) return false;
       if (filterMonth !== 'all' && (!ym || ym.month !== filterMonth)) return false;
+      if (!labelMatch(t)) return false;
       return true;
     });
+
+    const anyFilter = filterYear !== 'all' || filterMonth !== 'all' || filterLabel !== 'all';
 
     if (ql.length === 0) {
       // When no search, prioritize done tasks but include all matching the filter.
       const filtered = list.filter((t) =>
-        filterYear !== 'all' || filterMonth !== 'all' ? !t.archived : t.state === 'done',
+        anyFilter ? !t.archived : t.state === 'done',
       );
-      return filtered.slice(0, filterYear !== 'all' || filterMonth !== 'all' ? 200 : 50);
+      return filtered.slice(0, anyFilter ? 200 : 50);
     }
     return list
       .filter(
@@ -103,7 +136,7 @@ export function ArchiveView({ userId }: Props) {
           (t.completion_note ?? '').toLowerCase().includes(ql),
       )
       .slice(0, 200);
-  }, [allTasks, ql, filterYear, filterMonth]);
+  }, [allTasks, ql, filterYear, filterMonth, filterLabel, taskIdToLabelIds]);
 
   const matchingPages = useMemo(
     () =>
@@ -120,7 +153,8 @@ export function ArchiveView({ userId }: Props) {
     return (days ?? []).filter((d) => d.notes.toLowerCase().includes(ql));
   }, [days, ql]);
 
-  const noFilter = ql.length === 0 && filterYear === 'all' && filterMonth === 'all';
+  const noFilter =
+    ql.length === 0 && filterYear === 'all' && filterMonth === 'all' && filterLabel === 'all';
   const isEmpty =
     noFilter &&
     matchingTasks.length === 0 &&
@@ -177,7 +211,7 @@ export function ArchiveView({ userId }: Props) {
       <div className="row items-center justify-between">
         <h2
           className="hand"
-          style={{ fontSize: 32, lineHeight: 1, fontWeight: 700, margin: 0 }}
+          style={{ fontSize: 28, lineHeight: 1, fontWeight: 600, margin: 0 }}
         >
           <span className="underline-hand">archive</span>
         </h2>
@@ -243,10 +277,35 @@ export function ArchiveView({ userId }: Props) {
               ...monthOptions.map((m) => ({ value: String(m), label: MONTH_NAMES[m - 1] })),
             ]}
           />
-          {(filterYear !== 'all' || filterMonth !== 'all') && (
+          <FilterDropdown
+            label="label"
+            value={filterLabel}
+            onChange={(v) => setFilterLabel(v)}
+            options={[
+              { value: 'all', label: 'all labels' },
+              ...(labels ?? []).map((l) => ({ value: l.id, label: l.name })),
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => setLabelsManagerOpen(true)}
+            className="ui hover:bg-paper-warm transition-colors"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--ink-faint)',
+              padding: '6px 8px',
+              fontSize: 12,
+              cursor: 'pointer',
+              borderRadius: 4,
+            }}
+          >
+            ⚙
+          </button>
+          {(filterYear !== 'all' || filterMonth !== 'all' || filterLabel !== 'all') && (
             <button
               type="button"
-              onClick={() => { setFilterYear('all'); setFilterMonth('all'); }}
+              onClick={() => { setFilterYear('all'); setFilterMonth('all'); setFilterLabel('all'); }}
               className="ui hover:bg-paper-warm transition-colors"
               style={{
                 border: 'none',
@@ -449,6 +508,7 @@ function ArchiveTaskRow({ task, onOpen, onEdit, onDelete }: ArchiveTaskRowProps)
         >
           {task.title}
         </span>
+        <LabelChips taskId={task.id} size="sm" max={3} />
         <span className="tiny num" style={{ flexShrink: 0 }}>
           {task.day_key ?? 'backlog'}
         </span>

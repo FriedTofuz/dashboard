@@ -18,7 +18,7 @@ export function RangeView() {
       <div className="row items-center justify-between">
         <h2
           className="hand"
-          style={{ fontSize: 32, lineHeight: 1, fontWeight: 700, margin: 0 }}
+          style={{ fontSize: 28, lineHeight: 1, fontWeight: 600, margin: 0 }}
         >
           <span className="underline-hand">range view</span>
         </h2>

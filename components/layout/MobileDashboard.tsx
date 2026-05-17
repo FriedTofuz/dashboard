@@ -24,6 +24,8 @@ import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
 import { RangeView } from '@/components/range/RangeView';
 import { ArchiveView } from '@/components/archive/ArchiveView';
+import { DayLabelFilter } from '@/components/labels/DayLabelFilter';
+import { ManageLabelsModal } from '@/components/labels/ManageLabelsModal';
 import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
@@ -73,12 +75,11 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               <RuleOf3Row dayKey={currentDayKey} />
               <HabitsSection dayKey={currentDayKey} />
               <div className="col" style={{ gap: 10 }}>
-                <p className="section-head muted">Tasks</p>
-                <TaskList dayKey={currentDayKey} kind="open" showAddRow />
-              </div>
-              <div className="col" style={{ gap: 10 }}>
-                <p className="section-head sage">Done</p>
-                <TaskList dayKey={currentDayKey} kind="done" />
+                <div className="row items-center justify-between" style={{ gap: 12, flexWrap: 'wrap' }}>
+                  <p className="section-head muted">Tasks</p>
+                  <DayLabelFilter userId={userId} />
+                </div>
+                <TaskList dayKey={currentDayKey} showAddRow />
               </div>
               <div className="row" style={{ gap: 12, paddingTop: 4 }}>
                 <ThemeToggle />
@@ -92,7 +93,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
             <div className="col" style={{ gap: 14, height: '80vh' }}>
               <h2
                 className="hand"
-                style={{ fontSize: 32, lineHeight: 1, fontWeight: 700 }}
+                style={{ fontSize: 28, lineHeight: 1, fontWeight: 600 }}
               >
                 <span className="underline-hand">notes</span>
               </h2>
@@ -108,7 +109,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
             <div className="col" style={{ gap: 18 }}>
               <h2
                 className="hand"
-                style={{ fontSize: 32, lineHeight: 1, fontWeight: 700 }}
+                style={{ fontSize: 28, lineHeight: 1, fontWeight: 600 }}
               >
                 <span className="underline-hand">stats</span>
               </h2>
@@ -142,8 +143,8 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               borderRadius: '999px',
               padding: '14px 20px',
               fontFamily: 'var(--font-hand), cursive',
-              fontWeight: 700,
-              fontSize: 26,
+              fontWeight: 600,
+              fontSize: 24,
               boxShadow: 'var(--shadow)',
               zIndex: 10,
             }}
@@ -230,6 +231,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <NotepadArchiveModal userId={userId} />
       <ConfirmDialog />
       <CommandPalette userId={userId} />
+      <ManageLabelsModal userId={userId} />
       <InstallPrompt />
     </div>
   );

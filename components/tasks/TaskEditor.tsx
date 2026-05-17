@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createTask, updateTask } from '@/lib/idb/tasks';
+import { setTaskLabels, getLabelsForTask } from '@/lib/idb/labels';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDb } from '@/lib/idb/db';
+import { LabelPicker } from '@/components/labels/LabelPicker';
 import { cn } from '@/lib/utils';
 
 interface TaskEditorProps {
@@ -22,13 +24,28 @@ export function TaskEditor({ userId }: TaskEditorProps) {
   const [title, setTitle] = useState('');
   const [est, setEst] = useState('25');
   const [desc, setDesc] = useState('');
+  const [labelIds, setLabelIds] = useState<string[]>([]);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
-  // Reset form when editor opens
-  if (isEditorOpen && editingTaskId && existingTask && title === '') {
-    setTitle(existingTask.title);
-    setEst(String(existingTask.est_minutes));
-    setDesc(existingTask.description ?? '');
-  }
+  // Load existing task once the record is available.
+  useEffect(() => {
+    if (!isEditorOpen) return;
+    if (!editingTaskId) {
+      setTitle('');
+      setEst('25');
+      setDesc('');
+      setLabelIds([]);
+      setLoadedFor('__new__');
+      return;
+    }
+    if (existingTask && loadedFor !== editingTaskId) {
+      setTitle(existingTask.title);
+      setEst(String(existingTask.est_minutes));
+      setDesc(existingTask.description ?? '');
+      void getLabelsForTask(existingTask.id).then(setLabelIds);
+      setLoadedFor(editingTaskId);
+    }
+  }, [isEditorOpen, editingTaskId, existingTask, loadedFor]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +54,7 @@ export function TaskEditor({ userId }: TaskEditorProps) {
     const estVal = parseInt(est, 10);
     if (isNaN(estVal) || estVal <= 0) return;
 
+    let id = editingTaskId;
     if (editingTaskId) {
       await updateTask(editingTaskId, {
         title: title.trim(),
@@ -44,7 +62,7 @@ export function TaskEditor({ userId }: TaskEditorProps) {
         description: desc || undefined,
       });
     } else {
-      await createTask(
+      id = await createTask(
         {
           day_key: currentDayKey,
           template_id: null,
@@ -65,9 +83,13 @@ export function TaskEditor({ userId }: TaskEditorProps) {
       );
     }
 
+    if (id) await setTaskLabels(id, labelIds, userId);
+
     setTitle('');
     setEst('25');
     setDesc('');
+    setLabelIds([]);
+    setLoadedFor(null);
     closeEditor();
   }
 
@@ -75,6 +97,8 @@ export function TaskEditor({ userId }: TaskEditorProps) {
     setTitle('');
     setEst('25');
     setDesc('');
+    setLabelIds([]);
+    setLoadedFor(null);
     closeEditor();
   }
 
@@ -124,6 +148,11 @@ export function TaskEditor({ userId }: TaskEditorProps) {
               'focus:outline-none focus:border-ink',
             )}
           />
+        </div>
+
+        <div className="col gap-1">
+          <label className="tiny">labels</label>
+          <LabelPicker selected={labelIds} onChange={setLabelIds} userId={userId} />
         </div>
 
         <div className="col gap-1">

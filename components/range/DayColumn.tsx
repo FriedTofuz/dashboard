@@ -80,7 +80,7 @@ export function DayColumn({ dayKey }: DayColumnProps) {
           <span className="tiny">{weekday}</span>
           <span
             className="hand"
-            style={{ fontSize: 26, lineHeight: 1, fontWeight: 700 }}
+            style={{ fontSize: 23, lineHeight: 1, fontWeight: 600 }}
           >
             {isToday ? <span className="underline-hand">{monthDay}</span> : monthDay}
           </span>

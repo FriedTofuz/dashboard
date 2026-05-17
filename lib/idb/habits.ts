@@ -48,13 +48,32 @@ export async function ensureHabitInstances(dayKey: string, userId: string): Prom
     if (existing) continue;
 
     const ts = now();
+
+    // For workout templates, build a description from today's exercises so it
+    // shows up in the task row's secondary line; structured rendering happens
+    // via the workout panel.
+    let description: string | undefined;
+    if (tmpl.kind === 'workout' && tmpl.workout_data) {
+      const dow = new Date(`${dayKey}T00:00:00`).getDay();
+      const plan = tmpl.workout_data[dow];
+      if (plan && plan.exercises.length > 0) {
+        const lines: string[] = [];
+        if (plan.title) lines.push(plan.title);
+        for (const ex of plan.exercises) {
+          const w = ex.weight ? ` @ ${ex.weight}` : '';
+          lines.push(`${ex.sets}×${ex.reps} ${ex.name}${w}`);
+        }
+        description = lines.join('\n');
+      }
+    }
+
     const task: Task = {
       id: newId(),
       user_id: userId,
       day_key: dayKey,
       template_id: tmpl.id,
       title: tmpl.title,
-      description: undefined,
+      description,
       est_minutes: tmpl.est_minutes,
       state: 'open',
       started_at: null,
@@ -66,6 +85,7 @@ export async function ensureHabitInstances(dayKey: string, userId: string): Prom
       sort_order: tmpl.sort_order,
       skipped: false,
       archived: false,
+      workout_progress: tmpl.kind === 'workout' ? {} : null,
       created_at: ts,
       updated_at: ts,
     };
@@ -85,30 +105,33 @@ function habitToRemote(h: HabitTemplate): Record<string, unknown> {
     weight:           h.weight,
     active:           h.active,
     sort_order:       h.sort_order,
+    kind:             h.kind ?? 'habit',
+    workout_data:     h.workout_data ?? null,
     created_at:       new Date(h.created_at).toISOString(),
   };
 }
 
 function taskToRemote(t: Task): Record<string, unknown> {
   return {
-    id:              t.id,
-    user_id:         t.user_id,
-    day_key:         t.day_key,
-    template_id:     t.template_id,
-    title:           t.title,
-    description:     t.description ?? null,
-    est_minutes:     t.est_minutes,
-    state:           t.state,
-    started_at:      t.started_at ? new Date(t.started_at).toISOString() : null,
-    elapsed_ms:      t.elapsed_ms,
-    actual_ms:       t.actual_ms,
-    completed_at:    t.completed_at ? new Date(t.completed_at).toISOString() : null,
-    completion_note: t.completion_note ?? null,
-    r3_slot:         t.r3_slot,
-    sort_order:      t.sort_order,
-    skipped:         t.skipped,
-    archived:        t.archived,
-    created_at:      new Date(t.created_at).toISOString(),
-    updated_at:      new Date(t.updated_at).toISOString(),
+    id:               t.id,
+    user_id:          t.user_id,
+    day_key:          t.day_key,
+    template_id:      t.template_id,
+    title:            t.title,
+    description:      t.description ?? null,
+    est_minutes:      t.est_minutes,
+    state:            t.state,
+    started_at:       t.started_at ? new Date(t.started_at).toISOString() : null,
+    elapsed_ms:       t.elapsed_ms,
+    actual_ms:        t.actual_ms,
+    completed_at:     t.completed_at ? new Date(t.completed_at).toISOString() : null,
+    completion_note:  t.completion_note ?? null,
+    r3_slot:          t.r3_slot,
+    sort_order:       t.sort_order,
+    skipped:          t.skipped,
+    archived:         t.archived,
+    workout_progress: t.workout_progress ?? null,
+    created_at:       new Date(t.created_at).toISOString(),
+    updated_at:       new Date(t.updated_at).toISOString(),
   };
 }

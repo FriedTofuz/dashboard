@@ -152,6 +152,52 @@ export async function pullNotepad(userId: string): Promise<void> {
   );
 }
 
+export async function pullLabels(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('labels')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull labels failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    await db.labels.put({
+      id:         row.id,
+      user_id:    row.user_id,
+      name:       row.name,
+      color:      row.color ?? '#6B8A5C',
+      sort_order: row.sort_order ?? 0,
+      created_at: new Date(row.created_at).getTime(),
+      updated_at: new Date(row.updated_at).getTime(),
+    });
+  }
+}
+
+export async function pullTaskLabels(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('task_labels')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull task_labels failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    await db.task_labels.put({
+      id:         row.id,
+      task_id:    row.task_id,
+      label_id:   row.label_id,
+      user_id:    row.user_id,
+      created_at: new Date(row.created_at).getTime(),
+    });
+  }
+}
+
 export async function pullSettings(userId: string): Promise<void> {
   const db = getDb();
   const supabase = createClient();
@@ -252,6 +298,8 @@ export async function bootSync(userId: string): Promise<() => void> {
     pullDays(userId),
     pullTasks(userId),
     pullNotepad(userId),
+    pullLabels(userId),
+    pullTaskLabels(userId),
   ]);
 
   await flushQueue();
@@ -277,25 +325,26 @@ export async function bootSync(userId: string): Promise<() => void> {
 
 function remoteRowToTask(row: Record<string, unknown>): Task {
   return {
-    id:              row.id as string,
-    user_id:         row.user_id as string,
-    day_key:         row.day_key as string | null,
-    template_id:     row.template_id as string | null,
-    title:           row.title as string,
-    description:     row.description as string | undefined,
-    est_minutes:     (row.est_minutes as number) ?? 25,
-    state:           (row.state as Task['state']) ?? 'open',
-    started_at:      row.started_at ? new Date(row.started_at as string).getTime() : null,
-    elapsed_ms:      (row.elapsed_ms as number) ?? 0,
-    actual_ms:       row.actual_ms as number | null,
-    completed_at:    row.completed_at ? new Date(row.completed_at as string).getTime() : null,
-    completion_note: row.completion_note as string | undefined,
-    r3_slot:         row.r3_slot as 1 | 2 | 3 | null,
-    sort_order:      (row.sort_order as number) ?? 0,
-    skipped:         (row.skipped as boolean) ?? false,
-    archived:        (row.archived as boolean) ?? false,
-    created_at:      new Date(row.created_at as string).getTime(),
-    updated_at:      new Date(row.updated_at as string).getTime(),
+    id:               row.id as string,
+    user_id:          row.user_id as string,
+    day_key:          row.day_key as string | null,
+    template_id:      row.template_id as string | null,
+    title:            row.title as string,
+    description:      row.description as string | undefined,
+    est_minutes:      (row.est_minutes as number) ?? 25,
+    state:            (row.state as Task['state']) ?? 'open',
+    started_at:       row.started_at ? new Date(row.started_at as string).getTime() : null,
+    elapsed_ms:       (row.elapsed_ms as number) ?? 0,
+    actual_ms:        row.actual_ms as number | null,
+    completed_at:     row.completed_at ? new Date(row.completed_at as string).getTime() : null,
+    completion_note:  row.completion_note as string | undefined,
+    r3_slot:          row.r3_slot as 1 | 2 | 3 | null,
+    sort_order:       (row.sort_order as number) ?? 0,
+    skipped:          (row.skipped as boolean) ?? false,
+    archived:         (row.archived as boolean) ?? false,
+    workout_progress: (row.workout_progress as Task['workout_progress']) ?? null,
+    created_at:       new Date(row.created_at as string).getTime(),
+    updated_at:       new Date(row.updated_at as string).getTime(),
   };
 }
 
@@ -310,6 +359,8 @@ function remoteRowToHabit(row: Record<string, unknown>): HabitTemplate {
     weight:           (row.weight as number) ?? 1,
     active:           (row.active as boolean) ?? true,
     sort_order:       (row.sort_order as number) ?? 0,
+    kind:             (row.kind as HabitTemplate['kind']) ?? 'habit',
+    workout_data:     (row.workout_data as HabitTemplate['workout_data']) ?? null,
     created_at:       new Date(row.created_at as string).getTime(),
   };
 }

@@ -23,6 +23,8 @@ import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
 import { RangeView } from '@/components/range/RangeView';
 import { ArchiveView } from '@/components/archive/ArchiveView';
+import { DayLabelFilter } from '@/components/labels/DayLabelFilter';
+import { ManageLabelsModal } from '@/components/labels/ManageLabelsModal';
 import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
@@ -80,13 +82,11 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
                 <HabitsSection dayKey={currentDayKey} />
 
                 <div className="col" style={{ gap: 10 }}>
-                  <p className="section-head muted">Tasks</p>
-                  <TaskList dayKey={currentDayKey} kind="open" showAddRow />
-                </div>
-
-                <div className="col" style={{ gap: 10 }}>
-                  <p className="section-head sage">Done</p>
-                  <TaskList dayKey={currentDayKey} kind="done" />
+                  <div className="row items-center justify-between" style={{ gap: 12 }}>
+                    <p className="section-head muted">Tasks</p>
+                    <DayLabelFilter userId={userId} />
+                  </div>
+                  <TaskList dayKey={currentDayKey} showAddRow />
                 </div>
 
                 <Footer />
@@ -121,6 +121,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <NotepadArchiveModal userId={userId} />
       <ConfirmDialog />
       <CommandPalette userId={userId} />
+      <ManageLabelsModal userId={userId} />
     </div>
   );
 }

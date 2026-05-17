@@ -99,6 +99,9 @@ export function DndProvider({ children }: DndProviderProps) {
     }
 
     if (target.kind === 'day') {
+      // moveTaskToDay also clears r3_slot, so this handles both a same-day
+      // demotion out of R3 (dropping a R3 card onto the empty Tasks zone)
+      // and a cross-day move (dropping onto a different day's pill).
       await moveTaskToDay(taskId, target.dayKey);
       return;
     }
@@ -182,7 +185,7 @@ function DragPreview({ task }: { task: Task }) {
         </div>
         <span
           className="hand"
-          style={{ fontSize: 22, lineHeight: 1.1, color: 'var(--ink)', marginTop: 'auto' }}
+          style={{ fontSize: 20, lineHeight: 1.1, color: 'var(--ink)', marginTop: 'auto' }}
         >
           {task.title}
         </span>

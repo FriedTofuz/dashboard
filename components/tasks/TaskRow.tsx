@@ -21,6 +21,7 @@ import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
+import { LabelChips } from '@/components/labels/LabelChips';
 import type { Task } from '@/lib/idb/db';
 
 interface TaskRowProps {
@@ -133,6 +134,9 @@ export function TaskRow({
           >
             {task.title}
           </span>
+
+          <LabelChips taskId={task.id} size="sm" />
+
 
           {task.state === 'running' ? (
             <div className="flex items-center gap-3 shrink-0">

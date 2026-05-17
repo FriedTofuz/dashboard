@@ -3,6 +3,36 @@ import Dexie, { type Table } from 'dexie';
 export type TaskState = 'open' | 'running' | 'paused' | 'done';
 export type Recurrence = 'daily' | 'weekday' | 'weekly' | 'custom';
 
+export type HabitKind = 'habit' | 'workout';
+
+/** One exercise within a workout day. */
+export interface WorkoutExercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  weight?: string;   // free-form: "135 lb", "bodyweight"
+  notes?: string;
+}
+
+/** Per-weekday workout plan. Keyed by 0-6 (Sun-Sat). */
+export type WorkoutData = {
+  [dayOfWeek: number]: {
+    title?: string;           // e.g. "Leg day"
+    exercises: WorkoutExercise[];
+  };
+};
+
+/** Per-task workout progress — tracks which sets of which exercise are done. */
+export type WorkoutProgress = {
+  [exerciseId: string]: {
+    setsDone: number;
+  };
+};
+
+/** Per-task label assignments — keyed by labelId for O(1) lookup. */
+export type LabelIdList = string[];
+
 export interface Task {
   id: string;
   user_id: string;
@@ -21,6 +51,10 @@ export interface Task {
   sort_order: number;
   skipped: boolean;
   archived: boolean;
+  /** Workout-kind tasks only: per-exercise sets-completed counters. */
+  workout_progress?: WorkoutProgress | null;
+  /** Cached array of label IDs. Source of truth is the task_labels table. */
+  label_ids?: LabelIdList;
   created_at: number;
   updated_at: number;
 }
@@ -35,6 +69,29 @@ export interface HabitTemplate {
   weight: number;                    // default 1.0
   active: boolean;
   sort_order: number;
+  /** 'habit' (default) or 'workout' — workout templates carry a per-weekday plan. */
+  kind: HabitKind;
+  /** Only populated when kind === 'workout'. */
+  workout_data?: WorkoutData | null;
+  created_at: number;
+}
+
+export interface Label {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;            // hex, e.g. "#B85C3E"
+  sort_order: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface TaskLabel {
+  /** Compound primary key: `${task_id}|${label_id}`. */
+  id: string;
+  task_id: string;
+  label_id: string;
+  user_id: string;
   created_at: number;
 }
 
@@ -82,6 +139,8 @@ export class SunflowerDB extends Dexie {
   days!: Table<Day>;
   notepad_pages!: Table<NotepadPage>;
   settings!: Table<Settings>;
+  labels!: Table<Label>;
+  task_labels!: Table<TaskLabel>;
   write_queue!: Table<WriteQueueItem>;
 
   constructor() {
@@ -94,6 +153,24 @@ export class SunflowerDB extends Dexie {
       settings:       'user_id',
       write_queue:    '++id, table, row_id, attempted_at',
     });
+    // v2 — labels system + workout habits.
+    this.version(2)
+      .stores({
+        tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+        habit_templates:'id, user_id, active, kind, [user_id+active]',
+        days:           '[user_id+day_key], user_id, day_key',
+        notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+        settings:       'user_id',
+        labels:         'id, user_id, name, [user_id+name]',
+        task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+        write_queue:    '++id, table, row_id, attempted_at',
+      })
+      .upgrade(async (tx) => {
+        // Backfill habit_templates.kind for rows created under v1.
+        await tx.table('habit_templates').toCollection().modify((h) => {
+          if (!h.kind) h.kind = 'habit';
+        });
+      });
   }
 }
 

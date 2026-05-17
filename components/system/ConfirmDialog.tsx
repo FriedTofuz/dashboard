@@ -62,7 +62,7 @@ export function ConfirmDialog() {
           <h2
             id="confirm-title"
             className="hand"
-            style={{ fontSize: 24, lineHeight: 1.15, fontWeight: 700, margin: 0 }}
+            style={{ fontSize: 21, lineHeight: 1.15, fontWeight: 600, margin: 0 }}
           >
             {options.title}
           </h2>

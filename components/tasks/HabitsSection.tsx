@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { getDb } from '@/lib/idb/db';
 import { TaskRow } from './TaskRow';
+import { WorkoutHabitRow } from './WorkoutHabitRow';
 
 interface HabitsSectionProps {
   dayKey: string;
@@ -20,6 +21,14 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
     [dayKey],
     [],
   );
+
+  // Fetch the templates so we can branch on kind === 'workout'.
+  const templates = useLiveQuery(
+    () => getDb().habit_templates.toArray(),
+    [],
+    [],
+  );
+  const templateById = new Map((templates ?? []).map((t) => [t.id, t]));
 
   return (
     <div className="col habits-section" style={{ gap: 18 }}>
@@ -47,7 +56,6 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
             position: 'relative',
           }}
         >
-          {/* Left ochre rail to echo the R3 "everything green" accent */}
           <div
             aria-hidden
             style={{
@@ -67,9 +75,13 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
             strategy={verticalListSortingStrategy}
           >
             <div className="col" style={{ gap: 0 }}>
-              {habits.map((h, i) => (
-                <TaskRow key={h.id} task={h} index={i} showNumber={false} showSkip />
-              ))}
+              {habits.map((h, i) => {
+                const tmpl = h.template_id ? templateById.get(h.template_id) : undefined;
+                if (tmpl?.kind === 'workout') {
+                  return <WorkoutHabitRow key={h.id} task={h} template={tmpl} />;
+                }
+                return <TaskRow key={h.id} task={h} index={i} showNumber={false} showSkip />;
+              })}
             </div>
           </SortableContext>
         </div>
