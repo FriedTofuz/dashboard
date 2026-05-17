@@ -204,6 +204,34 @@ export async function moveTaskToDay(taskId: string, dayKey: string): Promise<voi
   await updateTask(taskId, { day_key: dayKey, r3_slot: null });
 }
 
+/** Duplicate a task into the same day (or a target day). The clone is fresh:
+ *  state=open, no timer, no completion data, no R3 slot. Sort order is bumped
+ *  so the clone shows up below the original. */
+export async function duplicateTask(taskId: string, targetDayKey?: string): Promise<string | null> {
+  const original = await getDb().tasks.get(taskId);
+  if (!original) return null;
+  return createTask(
+    {
+      day_key: targetDayKey ?? original.day_key,
+      template_id: null, // habit instances duplicate as standalone one-offs
+      title: original.title,
+      description: original.description,
+      est_minutes: original.est_minutes,
+      state: 'open',
+      started_at: null,
+      elapsed_ms: 0,
+      actual_ms: null,
+      completed_at: null,
+      completion_note: undefined,
+      r3_slot: null,
+      sort_order: original.sort_order + 0.5,
+      skipped: false,
+      archived: false,
+    },
+    original.user_id,
+  );
+}
+
 /** Toggle skip on a habit instance. */
 export async function skipTask(taskId: string, skipped = true): Promise<void> {
   await updateTask(taskId, { skipped });

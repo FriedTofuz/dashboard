@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { PaperCard } from '@/components/ui/PaperCard';
 import { formatDeficit } from '@/lib/compute/deficit';
 import { useStats } from '@/lib/hooks/useStats';
+import { useLongTermStats } from '@/lib/hooks/useLongTermStats';
 import { getDb } from '@/lib/idb/db';
 
 interface StatsCardProps {
@@ -18,6 +19,33 @@ interface StatChipProps {
   label: string;
   value: string;
   accent: 'ink' | 'sage' | 'terra';
+}
+
+function LongTermStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="col" style={{ gap: 2, flex: 1 }}>
+      <span className="tiny" style={{ letterSpacing: '0.14em' }}>{label}</span>
+      <span
+        className="ui-b num"
+        style={{
+          fontSize: 18,
+          lineHeight: 1.1,
+          color: 'var(--ink-soft)',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </span>
+      {sub && (
+        <span
+          className="ui num"
+          style={{ fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.04em' }}
+        >
+          {sub}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function StatChip({ label, value, accent }: StatChipProps) {
@@ -48,6 +76,7 @@ function StatChip({ label, value, accent }: StatChipProps) {
 
 export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: StatsCardProps) {
   const { todayPct, weekAvgPct, streakDays, heatmap } = useStats(dayKey);
+  const { monthAvgPct, yearAvgPct, allTimeAvgPct, daysLogged } = useLongTermStats(userId, dayKey);
   const streakLen = streakDays.filter(Boolean).length;
 
   const distinctDays = useLiveQuery(
@@ -57,7 +86,7 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
   );
 
   // §8 — Stats first day: show empty state until 2+ days of data
-  if ((distinctDays ?? 0) < 2 && todayPct === 0 && weekAvgPct === 0) {
+  if ((distinctDays ?? 0) < 2 && daysLogged < 2 && todayPct === 0 && weekAvgPct === 0) {
     return (
       <div className="empty-state">
         <span className="headline">come back tomorrow</span>
@@ -92,6 +121,24 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
             label="Time deficit"
             value={formatDeficit(deficitSeconds)}
             accent={deficitSeconds > 0 ? 'terra' : 'sage'}
+          />
+        </div>
+
+        {/* Long-term averages row */}
+        <div
+          className="row items-baseline"
+          style={{
+            gap: 24,
+            paddingTop: 10,
+            borderTop: '1px solid var(--rule)',
+          }}
+        >
+          <LongTermStat label="Month" value={`${monthAvgPct}%`} />
+          <LongTermStat label="Year" value={`${yearAvgPct}%`} />
+          <LongTermStat
+            label="All time"
+            value={`${allTimeAvgPct}%`}
+            sub={`${daysLogged} day${daysLogged === 1 ? '' : 's'}`}
           />
         </div>
 

@@ -61,7 +61,7 @@ export function ProgressCard({ dayKey = todayKey(), deficitSeconds = 0 }: Progre
 
       <div className="row items-center justify-between" style={{ marginTop: 8 }}>
         <span className="tiny num">
-          {estDone}m of est. {estTotal}m logged
+          {estTotal}m estimated — {estDone}m logged
         </span>
         {deficitSeconds > 0 && (
           <span className="tiny num" style={{ color: 'var(--terra-deep)' }}>

@@ -84,13 +84,18 @@ export function DndProvider({ children }: DndProviderProps) {
     }
 
     if (target.kind === 'task' && target.id !== taskId) {
-      // Reorder within open task list. We need the sort_orders of the over task
-      // and its neighbor on the side we approached from. The simplest approach:
-      // place the active task between the over task and its neighbor.
       const db = getDb();
       const overTask = await db.tasks.get(target.id);
       const activeTask = await db.tasks.get(taskId);
       if (!overTask || !activeTask || overTask.day_key !== activeTask.day_key) return;
+
+      // If the active task is in R3 and the target is a regular task, drop it
+      // out of R3 first. Lets the user drag an R3 priority back into the
+      // regular Tasks list to demote it.
+      const droppingOutOfR3 = activeTask.r3_slot != null && overTask.r3_slot == null;
+      if (droppingOutOfR3 && overTask.day_key) {
+        await setR3Slot(taskId, null, overTask.day_key);
+      }
 
       const siblings = await db.tasks
         .where('day_key')

@@ -18,8 +18,16 @@ interface UiState {
   openEditor: (taskId?: string) => void;
   closeEditor: () => void;
 
+  /** Pending completion: when set, CompletionPrompt opens for this task. */
+  completingTaskId: string | null;
+  requestCompletion: (taskId: string) => void;
+  clearCompletion: () => void;
+
   habitsEditorOpen: boolean;
   setHabitsEditorOpen: (open: boolean) => void;
+
+  notepadArchiveOpen: boolean;
+  setNotepadArchiveOpen: (open: boolean) => void;
 
   commandPaletteOpen: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
@@ -46,8 +54,15 @@ export const useUiStore = create<UiState>()((set) => ({
   openEditor: (taskId) => set({ isEditorOpen: true, editingTaskId: taskId ?? null }),
   closeEditor: () => set({ isEditorOpen: false, editingTaskId: null }),
 
+  completingTaskId: null,
+  requestCompletion: (taskId) => set({ completingTaskId: taskId }),
+  clearCompletion: () => set({ completingTaskId: null }),
+
   habitsEditorOpen: false,
   setHabitsEditorOpen: (open) => set({ habitsEditorOpen: open }),
+
+  notepadArchiveOpen: false,
+  setNotepadArchiveOpen: (open) => set({ notepadArchiveOpen: open }),
 
   commandPaletteOpen: false,
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
