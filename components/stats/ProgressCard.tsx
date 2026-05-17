@@ -7,7 +7,6 @@ import { formatDeficit } from '@/lib/compute/deficit';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { PaperCard } from '@/components/ui/PaperCard';
 import { todayKey } from '@/lib/time/dayKey';
-import { cn } from '@/lib/utils';
 
 interface ProgressCardProps {
   dayKey?: string;
@@ -35,25 +34,39 @@ export function ProgressCard({ dayKey = todayKey(), deficitSeconds = 0 }: Progre
     .filter((t) => t.state === 'done')
     .reduce((s, t) => s + (t.actual_ms != null ? Math.round(t.actual_ms / 60000) : t.est_minutes), 0);
 
+  const overGoal = value > 100;
+
   return (
-    <PaperCard variant="soft" className="px-4 py-3 col gap-2">
-      <div className="row items-baseline justify-between">
-        <span className="font-hand text-body-sm soft">
+    <PaperCard variant="soft" style={{ padding: '18px 24px' }}>
+      <div className="row items-baseline justify-between" style={{ marginBottom: 10 }}>
+        <span
+          className="ui"
+          style={{ fontSize: 14, color: 'var(--ink-soft)', letterSpacing: '0.02em' }}
+        >
           today&apos;s progress · {doneCount} of {totalCount} done
         </span>
-        <span className={cn('font-hand text-h3', value >= cap ? 'text-sage-deep' : 'text-ink-soft')}>
+        <span
+          className="ui-b num"
+          style={{
+            fontSize: 22,
+            color: overGoal ? 'var(--ochre-deep)' : 'var(--sage-deep)',
+            lineHeight: 1,
+          }}
+        >
           {value}%
         </span>
       </div>
 
-      <ProgressBar value={value} cap={cap} />
+      <ProgressBar value={value} cap={cap} overGoal={overGoal} />
 
-      <div className="row items-center justify-between">
-        <span className="tiny">
+      <div className="row items-center justify-between" style={{ marginTop: 8 }}>
+        <span className="tiny num">
           {estDone}m of est. {estTotal}m logged
         </span>
         {deficitSeconds > 0 && (
-          <span className="tiny text-terra">{formatDeficit(deficitSeconds)} deficit</span>
+          <span className="tiny num" style={{ color: 'var(--terra-deep)' }}>
+            {formatDeficit(deficitSeconds)} deficit
+          </span>
         )}
       </div>
     </PaperCard>

@@ -77,16 +77,40 @@ export function ArchiveView({ userId }: Props) {
     return (days ?? []).filter((d) => d.notes.toLowerCase().includes(ql));
   }, [days, ql]);
 
+  const isEmpty =
+    ql.length === 0 &&
+    matchingTasks.length === 0 &&
+    matchingPages.length === 0 &&
+    (days ?? []).length === 0;
+
   return (
-    <div className="col gap-4 max-w-3xl mx-auto">
+    <div
+      className="col"
+      style={{ gap: 24, maxWidth: 800, margin: '0 auto', width: '100%' }}
+    >
       <div className="row items-center justify-between">
-        <h2 className="font-hand text-h2">
+        <h2
+          className="hand"
+          style={{ fontSize: 32, lineHeight: 1, fontWeight: 700, margin: 0 }}
+        >
           <span className="underline-hand">archive</span>
         </h2>
         <button
           type="button"
           onClick={() => setView('today')}
-          className="ink-box-soft font-hand text-body-sm px-4 py-1.5 hover:wash-sage transition-colors"
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={{
+            fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+            fontWeight: 500,
+            fontSize: 13,
+            border: '1.5px solid var(--ink-soft)',
+            borderRadius: 5,
+            padding: '8px 14px',
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+            cursor: 'pointer',
+            minHeight: 36,
+          }}
         >
           back to today
         </button>
@@ -97,94 +121,136 @@ export function ArchiveView({ userId }: Props) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="search tasks, notes, pages…"
-        className="font-hand text-body bg-transparent border-b py-2 px-1 focus:outline-none"
-        style={{ borderColor: 'var(--ink-faint)' }}
+        className="hand bg-transparent"
+        style={{
+          fontSize: 20,
+          fontWeight: 500,
+          borderBottom: '1px solid var(--ink-faint)',
+          padding: '8px 2px',
+          outline: 'none',
+          color: 'var(--ink)',
+        }}
         autoFocus
       />
 
-      {ql.length > 0 && matchingDays.length > 0 && (
-        <div className="col gap-2">
-          <h3 className="tiny text-sage-deep">day notes</h3>
-          {matchingDays.map((d) => (
-            <button
-              key={`${d.user_id}_${d.day_key}`}
-              type="button"
-              onClick={() => {
-                setCurrentDayKey(d.day_key);
-                setView('today');
-              }}
-              className="paper ink-box-soft rounded-card p-3 text-left hover:wash-sage transition-colors"
-            >
-              <div className="row items-center justify-between mb-1">
-                <span className="font-hand text-body-sm">
-                  {formatDayLabel(d.day_key).monthDay}
-                </span>
-                <span className="tiny">{d.day_key}</span>
-              </div>
-              <p className="font-hand text-body-sm muted whitespace-pre-line line-clamp-3">
-                {d.notes}
-              </p>
-            </button>
-          ))}
+      {isEmpty ? (
+        <div className="empty-state">
+          <span className="headline">no history yet</span>
+          <span className="sub">your first archived day appears tomorrow</span>
         </div>
-      )}
-
-      {matchingPages.length > 0 && (
-        <div className="col gap-2">
-          <h3 className="tiny text-sage-deep">notepad pages</h3>
-          {matchingPages.map((p) => (
-            <div
-              key={p.id}
-              className={cn(
-                'paper rounded-card p-3',
-                p.archived ? 'ink-box-soft opacity-70' : 'ink-box-sage',
-              )}
-            >
-              <div className="row items-center justify-between mb-1">
-                <span className="font-hand text-body">{p.title}</span>
-                {p.archived && <span className="tiny">archived</span>}
-              </div>
-              <p className="font-hand text-body-sm muted whitespace-pre-line line-clamp-3">
-                {p.body}
-              </p>
+      ) : (
+        <>
+          {ql.length > 0 && matchingDays.length > 0 && (
+            <div className="col" style={{ gap: 8 }}>
+              <p className="section-head sage">Day notes</p>
+              {matchingDays.map((d) => (
+                <button
+                  key={`${d.user_id}_${d.day_key}`}
+                  type="button"
+                  onClick={() => {
+                    setCurrentDayKey(d.day_key);
+                    setView('today');
+                  }}
+                  className="paper wobble hover:bg-paper-warm transition-colors"
+                  style={{
+                    border: '1.5px solid var(--ink-soft)',
+                    borderRadius: 6,
+                    padding: 14,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div className="row items-center justify-between" style={{ marginBottom: 4 }}>
+                    <span className="hand" style={{ fontSize: 20, fontWeight: 600 }}>
+                      {formatDayLabel(d.day_key).monthDay}
+                    </span>
+                    <span className="tiny num">{d.day_key}</span>
+                  </div>
+                  <p className="hand muted line-clamp-3" style={{ fontSize: 17, whiteSpace: 'pre-line' }}>
+                    {d.notes}
+                  </p>
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      <div className="col gap-1">
-        <h3 className="tiny text-sage-deep">
-          {ql.length === 0 ? 'recent completions' : `tasks (${matchingTasks.length})`}
-        </h3>
-        {matchingTasks.length === 0 && (
-          <p className="muted caption italic">no matches</p>
-        )}
-        {matchingTasks
-          .sort((a, b) => (b.completed_at ?? b.updated_at) - (a.completed_at ?? a.updated_at))
-          .map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => {
-                if (t.day_key) {
-                  setCurrentDayKey(t.day_key);
-                  setView('today');
-                }
-              }}
-              className="row items-center justify-between py-1.5 px-2 rounded-card hover:wash-sage text-left transition-colors"
-            >
-              <span
-                className={cn(
-                  'font-hand text-body',
-                  t.state === 'done' && 'strike opacity-70',
-                )}
-              >
-                {t.title}
-              </span>
-              <span className="tiny">{t.day_key ?? 'backlog'}</span>
-            </button>
-          ))}
-      </div>
+          {matchingPages.length > 0 && (
+            <div className="col" style={{ gap: 8 }}>
+              <p className="section-head sage">Notepad pages</p>
+              {matchingPages.map((p) => (
+                <div
+                  key={p.id}
+                  className={cn('paper rounded-card wobble', p.archived && 'opacity-70')}
+                  style={{
+                    border: p.archived
+                      ? '1.5px solid var(--ink-soft)'
+                      : '1.6px solid var(--sage-deep)',
+                    padding: 14,
+                  }}
+                >
+                  <div className="row items-center justify-between" style={{ marginBottom: 4 }}>
+                    <span className="hand" style={{ fontSize: 20, fontWeight: 600 }}>
+                      {p.title}
+                    </span>
+                    {p.archived && <span className="tiny">archived</span>}
+                  </div>
+                  <p className="hand muted line-clamp-3" style={{ fontSize: 17, whiteSpace: 'pre-line' }}>
+                    {p.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="col" style={{ gap: 4 }}>
+            <p className="section-head sage">
+              {ql.length === 0 ? 'Recent completions' : `Tasks (${matchingTasks.length})`}
+            </p>
+            {matchingTasks.length === 0 && (
+              <p className="hand muted" style={{ fontSize: 17, fontStyle: 'italic' }}>
+                no matches
+              </p>
+            )}
+            {matchingTasks
+              .sort(
+                (a, b) =>
+                  (b.completed_at ?? b.updated_at) - (a.completed_at ?? a.updated_at),
+              )
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    if (t.day_key) {
+                      setCurrentDayKey(t.day_key);
+                      setView('today');
+                    }
+                  }}
+                  className="row items-center justify-between hover:bg-paper-warm transition-colors"
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 5,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'hand',
+                      t.state === 'done' && 'strike opacity-80',
+                    )}
+                    style={{ fontSize: 20 }}
+                  >
+                    {t.title}
+                  </span>
+                  <span className="tiny num">{t.day_key ?? 'backlog'}</span>
+                </button>
+              ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

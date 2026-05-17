@@ -1,95 +1,172 @@
 'use client';
 
+import { useLiveQuery } from 'dexie-react-hooks';
 import { PaperCard } from '@/components/ui/PaperCard';
 import { formatDeficit } from '@/lib/compute/deficit';
 import { useStats } from '@/lib/hooks/useStats';
-import { cn } from '@/lib/utils';
+import { getDb } from '@/lib/idb/db';
 
 interface StatsCardProps {
   userId: string;
   dayKey: string;
   deficitSeconds: number;
+  /** Force the mobile 15×2 streak grid even on desktop. */
+  mobile?: boolean;
 }
 
-export function StatsCard({ dayKey, deficitSeconds }: StatsCardProps) {
+interface StatChipProps {
+  label: string;
+  value: string;
+  accent: 'ink' | 'sage' | 'terra';
+}
+
+function StatChip({ label, value, accent }: StatChipProps) {
+  const color =
+    accent === 'sage'
+      ? 'var(--sage-deep)'
+      : accent === 'terra'
+        ? 'var(--terra-deep)'
+        : 'var(--ink)';
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <span className="tiny" style={{ letterSpacing: '0.14em' }}>{label}</span>
+      <span
+        className="ui-b num"
+        style={{
+          fontSize: 28,
+          lineHeight: 1,
+          color,
+          whiteSpace: 'nowrap',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: StatsCardProps) {
   const { todayPct, weekAvgPct, streakDays, heatmap } = useStats(dayKey);
   const streakLen = streakDays.filter(Boolean).length;
 
-  const chips = [
-    { label: 'today', value: `${todayPct}%`, accent: 'ink' as const },
-    { label: 'week avg', value: `${weekAvgPct}%`, accent: 'sage' as const },
-    {
-      label: 'time deficit',
-      value: formatDeficit(deficitSeconds),
-      accent: deficitSeconds > 0 ? ('terra' as const) : ('sage' as const),
-    },
-  ];
+  const distinctDays = useLiveQuery(
+    () => getDb().days.where('user_id').equals(userId).count(),
+    [userId],
+    0,
+  );
+
+  // §8 — Stats first day: show empty state until 2+ days of data
+  if ((distinctDays ?? 0) < 2 && todayPct === 0 && weekAvgPct === 0) {
+    return (
+      <div className="empty-state">
+        <span className="headline">come back tomorrow</span>
+        <span className="sub">stats need 2 days of data to mean anything</span>
+      </div>
+    );
+  }
+
+  // Build the streak squares. On desktop: up to 14, single row, ochre-gradient
+  // tied to completion intensity. On mobile (§9): 30 squares in 15×2 grid.
+  const streakDesktopCount = 14;
+  const streakSquares = mobile
+    ? heatmap.slice(-30)
+    : streakDays.slice(-streakDesktopCount).map((done) => ({
+        day: '',
+        pct: done ? 95 : 25,
+      }));
 
   return (
-    <PaperCard variant="soft" className="px-4 py-3 col gap-3">
-      <div className="row gap-4">
-        {chips.map((c) => (
-          <div key={c.label} className="col gap-0.5 flex-1">
-            <span className="tiny">{c.label}</span>
-            <span
-              className={cn(
-                'font-hand text-h3',
-                c.accent === 'sage' && 'text-sage-deep',
-                c.accent === 'terra' && 'text-terra-deep',
-              )}
-            >
-              {c.value}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="row items-center gap-2">
-        <span className="tiny w-12 shrink-0">streak</span>
-        <div className="flex flex-wrap gap-1 flex-1">
-          {streakDays.map((day, i) => (
-            <div
-              key={i}
-              className="wobble"
-              style={{
-                width: 12,
-                height: 12,
-                background: 'var(--sage)',
-                borderRadius: 2,
-                opacity: day ? 0.75 : 0.15,
-              }}
-              aria-label={day ? 'day complete' : 'incomplete'}
-            />
-          ))}
+    <PaperCard variant="soft" style={{ padding: '20px 24px' }}>
+      <div className="col" style={{ gap: 16 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 24,
+          }}
+        >
+          <StatChip label="Today" value={`${todayPct}%`} accent="ink" />
+          <StatChip label="Week avg" value={`${weekAvgPct}%`} accent="sage" />
+          <StatChip
+            label="Time deficit"
+            value={formatDeficit(deficitSeconds)}
+            accent={deficitSeconds > 0 ? 'terra' : 'sage'}
+          />
         </div>
-        {streakLen > 0 && (
-          <span className="font-hand text-body-sm text-sage-deep">{streakLen}d</span>
-        )}
-      </div>
 
-      <div className="row items-center gap-2">
-        <span className="tiny w-12 shrink-0">30d</span>
-        <div className="flex flex-wrap gap-[3px] flex-1">
-          {heatmap
-            .slice()
-            .reverse()
-            .map((d) => {
-              const intensity = Math.min(1, d.pct / 100);
-              return (
-                <div
-                  key={d.day}
-                  className="wobble"
-                  title={`${d.day} · ${d.pct}%`}
-                  style={{
-                    width: 9,
-                    height: 9,
-                    background: 'var(--sage)',
-                    borderRadius: 2,
-                    opacity: 0.1 + intensity * 0.75,
-                  }}
-                />
-              );
-            })}
+        {/* Streak row — ochre tint per §3, 16×16 desktop, 15×2 mobile per §9 */}
+        <div
+          className="row items-center"
+          style={{
+            gap: 12,
+            paddingTop: 10,
+            borderTop: '1px solid var(--rule)',
+          }}
+        >
+          <span
+            className="tiny"
+            style={{ width: 56, flexShrink: 0, letterSpacing: '0.14em' }}
+          >
+            Streak
+          </span>
+          {mobile ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(15, 1fr)',
+                gap: 3,
+                flex: 1,
+              }}
+            >
+              {streakSquares.map((d, i) => {
+                const intensity = Math.min(1, d.pct / 100);
+                const alpha = (0.2 + intensity * 0.8).toFixed(2);
+                return (
+                  <div
+                    key={i}
+                    className="wobble"
+                    title={d.day ? `${d.day} · ${d.pct}%` : undefined}
+                    style={{
+                      aspectRatio: '1 / 1',
+                      borderRadius: 2,
+                      border: '1px solid var(--ochre-deep)',
+                      background: `rgba(201, 138, 46, ${alpha})`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="row" style={{ gap: 4, flex: 1 }}>
+              {streakSquares.map((d, i) => {
+                const intensity = Math.min(1, d.pct / 100);
+                const alpha = (0.2 + intensity * 0.8).toFixed(2);
+                return (
+                  <div
+                    key={i}
+                    className="wobble"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 2,
+                      border: '1px solid var(--ochre-deep)',
+                      background: `rgba(201, 138, 46, ${alpha})`,
+                    }}
+                    aria-hidden
+                  />
+                );
+              })}
+            </div>
+          )}
+          {streakLen > 0 && (
+            <span
+              className="ui-b num"
+              style={{ color: 'var(--ochre-deep)', fontSize: 14 }}
+            >
+              {streakLen} days
+            </span>
+          )}
         </div>
       </div>
     </PaperCard>

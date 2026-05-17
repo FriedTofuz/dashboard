@@ -31,16 +31,28 @@ export function TaskList({ dayKey = todayKey(), kind }: TaskListProps) {
 
   if (!tasks || tasks.length === 0) {
     if (kind === 'open') {
-      return <p className="muted caption px-2 py-3 italic">— nothing else today —</p>;
+      // §8 — Today list, all clear
+      return (
+        <div className="empty-state">
+          <span className="headline">all clear ✿</span>
+          <span className="sub">the sunflower&apos;s having a great day</span>
+        </div>
+      );
     }
-    return null;
+    // §8 — Done list, nothing finished yet
+    return (
+      <div className="empty-state">
+        <span className="headline">nothing finished yet</span>
+        <span className="sub">start with the smallest one</span>
+      </div>
+    );
   }
 
   const ids = tasks.map((t) => `task-${t.id}`);
 
   return (
     <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-      <div className="col gap-0">
+      <div className="col" style={{ gap: 6 }}>
         {tasks.map((task, i) => (
           <TaskRow key={task.id} task={task} index={i} showNumber={kind === 'open'} />
         ))}

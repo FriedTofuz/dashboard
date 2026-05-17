@@ -1,20 +1,28 @@
 import type { Metadata, Viewport } from 'next';
-import { Caveat, Kalam } from 'next/font/google';
+import { Caveat, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { WobbleDefs } from '@/components/ui/WobbleDefs';
 import { PwaRegistrar } from '@/components/system/PwaRegistrar';
+import { ThemeBoot } from '@/components/system/ThemeBoot';
 
 const caveat = Caveat({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['500', '600', '700'],
   variable: '--font-caveat',
   display: 'swap',
 });
 
-const kalam = Kalam({
+const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '700'],
-  variable: '--font-kalam',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -30,15 +38,19 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F5EFE6',
+  themeColor: '#F2EADA',
   width: 'device-width',
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${caveat.variable} ${kalam.variable}`}>
-      <body className="font-hand bg-paper text-ink min-h-screen">
+    <html
+      lang="en"
+      className={`${caveat.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="bg-paper text-ink min-h-screen">
+        <ThemeBoot />
         <WobbleDefs />
         <PwaRegistrar />
         {children}

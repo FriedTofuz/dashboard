@@ -69,42 +69,45 @@ export function TaskRow({
   return (
     <div
       ref={sortable.setNodeRef}
-      style={style}
+      style={{ ...style, minHeight: 32 }}
       {...sortable.attributes}
       className={cn(
-        'flex items-start gap-2 py-1.5 group',
-        task.state === 'done' && 'opacity-70',
+        'flex items-center gap-3 py-1 group',
+        task.state === 'done' && 'opacity-80',
         task.skipped && 'opacity-50',
       )}
     >
       {showNumber && index !== undefined && (
-        <span className="num pt-0.5">{index + 1}.</span>
+        <span className="num-prefix">{index + 1}.</span>
       )}
 
       <HandCheckbox state={checkState} onClick={handleCheck} />
 
       <div
-        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing"
+        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing flex items-center gap-3"
         {...(draggable && task.state !== 'done' ? sortable.listeners : {})}
         onDoubleClick={() => openEditor(task.id)}
       >
         <span
           className={cn(
-            'font-hand text-body leading-snug',
+            'task-label flex-1 min-w-0',
             (task.state === 'done' || task.skipped) && 'strike',
           )}
         >
           {task.title}
         </span>
 
-        {task.state === 'running' && (
-          <div className="flex items-center gap-3 mt-0.5">
-            <span className="mono text-terra text-[11px]">
-              ▸ {elapsedLabel(liveElapsed)} elapsed
+        {task.state === 'running' ? (
+          <div className="flex items-center gap-3 shrink-0">
+            <span
+              className="mono num"
+              style={{ color: 'var(--terra-deep)', fontSize: 12 }}
+            >
+              ▸ {elapsedLabel(liveElapsed)}
             </span>
             <div
               className="bar"
-              style={{ width: 80, height: 6 }}
+              style={{ width: 70, height: 6 }}
               role="progressbar"
               aria-valuenow={Math.round(liveElapsed / 60000)}
               aria-valuemax={task.est_minutes}
@@ -116,17 +119,27 @@ export function TaskRow({
                 }}
               />
             </div>
-            <span className="mono muted text-[11px]">{task.est_minutes}m est</span>
+            <span className="mono num muted" style={{ fontSize: 11 }}>
+              {task.est_minutes}m est
+            </span>
           </div>
-        )}
-
-        {task.state === 'done' && task.actual_ms != null && (
-          <div className="tiny mt-0.5">
-            finished {Math.round(task.actual_ms / 60000)}m
+        ) : task.state === 'done' && task.actual_ms != null ? (
+          <span
+            className="hand num shrink-0"
+            style={{ fontSize: 17, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}
+          >
+            — {Math.round(task.actual_ms / 60000)}m
             {task.actual_ms < task.est_minutes * 60000
               ? ` · ${task.est_minutes - Math.round(task.actual_ms / 60000)}m under`
               : ''}
-          </div>
+          </span>
+        ) : (
+          <span
+            className="hand num shrink-0"
+            style={{ fontSize: 17, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}
+          >
+            — {task.est_minutes}min
+          </span>
         )}
       </div>
 
@@ -146,10 +159,14 @@ export function TaskRow({
           type="button"
           onClick={handleTimer}
           className={cn(
-            'mono text-[11px] opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5',
+            'mono opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5',
             'focus-visible:opacity-100',
-            task.state === 'running' ? 'text-terra' : 'muted',
           )}
+          style={{
+            color:
+              task.state === 'running' ? 'var(--terra-deep)' : 'var(--ink-faint)',
+            fontSize: 11,
+          }}
         >
           {task.state === 'running' ? '⏸' : '▸ start'}
         </button>
