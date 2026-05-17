@@ -87,7 +87,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
             </div>
           )}
 
-          {tab === 'range' && <RangeView />}
+          {tab === 'range' && <RangeView userId={userId} />}
 
           {tab === 'notepad' && (
             <div className="col" style={{ gap: 14, height: '80vh' }}>

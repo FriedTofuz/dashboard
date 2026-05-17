@@ -2,9 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { getDb } from '@/lib/idb/db';
-import { TaskRow } from '@/components/tasks/TaskRow';
+import { getDb, type Task } from '@/lib/idb/db';
 import { Sunflower } from '@/components/sunflower/Sunflower';
 import { formatDayLabel, todayKey } from '@/lib/time/dayKey';
 import { progressForDay } from '@/lib/compute/progress';
@@ -30,7 +28,7 @@ export function DayColumn({ dayKey }: DayColumnProps) {
         .tasks.where('day_key')
         .equals(dayKey)
         .filter((t) => !t.archived)
-        .sortBy('sort_order'),
+        .toArray(),
     [dayKey],
     [],
   );
@@ -44,11 +42,8 @@ export function DayColumn({ dayKey }: DayColumnProps) {
       : progress.value >= 25 ? 'drooping'
       : 'wilting';
 
-  const r3 = list.filter((t) => t.r3_slot != null);
-  const others = list.filter((t) => t.r3_slot == null && t.state !== 'done');
-  const done = list.filter((t) => t.r3_slot == null && t.state === 'done');
-
-  const sortableIds = [...others, ...done].map((t) => `task-${t.id}`);
+  const r3BySlot = (slot: 1 | 2 | 3) =>
+    list.find((t) => t.r3_slot === slot && !t.archived);
 
   return (
     <div
@@ -63,8 +58,8 @@ export function DayColumn({ dayKey }: DayColumnProps) {
           : '1.5px solid var(--ink-soft)',
         background: isToday ? 'var(--terra-tint)' : undefined,
         padding: 14,
-        gap: 10,
-        minHeight: 420,
+        gap: 12,
+        minHeight: 320,
       }}
     >
       <button
@@ -85,14 +80,13 @@ export function DayColumn({ dayKey }: DayColumnProps) {
             {isToday ? <span className="underline-hand">{monthDay}</span> : monthDay}
           </span>
         </div>
-        <div style={{ width: 56, height: 84, marginRight: -8 }}>
-          <Sunflower state={flowerState} size={56} />
+        <div style={{ width: 48, height: 72, marginRight: -8 }}>
+          <Sunflower state={flowerState} size={48} />
         </div>
       </button>
 
       <div className="col" style={{ gap: 4 }}>
         <div className="bar" style={{ height: 6 }}>
-          <div className="bar-cap" style={{ width: `${progress.cap}%` }} />
           <div className="bar-fill" style={{ width: `${progress.value}%` }} />
         </div>
         <div className="row items-center justify-between">
@@ -101,33 +95,93 @@ export function DayColumn({ dayKey }: DayColumnProps) {
         </div>
       </div>
 
-      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <div className="col" style={{ gap: 0 }}>
-          {r3.map((t) => (
-            <TaskRow key={t.id} task={t} showNumber={false} draggable={false} />
-          ))}
-          {others.map((t) => (
-            <TaskRow key={t.id} task={t} showNumber={false} />
-          ))}
-          {done.map((t) => (
-            <TaskRow key={t.id} task={t} showNumber={false} />
-          ))}
-        </div>
-      </SortableContext>
+      {/* Three stacked R3 boxes — fixed slots, no other tasks shown here. */}
+      <div className="col" style={{ gap: 8 }}>
+        {[1, 2, 3].map((slot) => (
+          <R3MiniBox key={slot} slot={slot as 1 | 2 | 3} task={r3BySlot(slot as 1 | 2 | 3)} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      {list.length === 0 && (
-        <p
-          className="hand"
-          style={{
-            color: 'var(--ink-faint)',
-            textAlign: 'center',
-            marginTop: 12,
-            fontSize: 18,
-          }}
+// ── Single R3 slot box in the range view ─────────────────────────────────
+
+interface R3MiniBoxProps {
+  slot: 1 | 2 | 3;
+  task: Task | undefined;
+}
+
+function R3MiniBox({ slot, task }: R3MiniBoxProps) {
+  if (!task) {
+    return (
+      <div
+        style={{
+          border: '1.5px dashed var(--ink-faint)',
+          borderRadius: 5,
+          padding: '10px 12px',
+          minHeight: 56,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span className="tiny" style={{ opacity: 0.6 }}>
+          priority {slot}
+        </span>
+        <span
+          className="hand muted italic"
+          style={{ fontSize: 14, color: 'var(--ink-faint)' }}
         >
-          — empty — drop a task here —
-        </p>
-      )}
+          —
+        </span>
+      </div>
+    );
+  }
+
+  const isDone = task.state === 'done';
+  const isRunning = task.state === 'running';
+  const bg = isDone
+    ? 'var(--sage-wash)'
+    : isRunning
+      ? 'var(--terra-wash)'
+      : 'var(--paper)';
+  const border = isDone
+    ? '1.6px solid var(--sage-deep)'
+    : isRunning
+      ? '1.6px solid var(--terra-deep)'
+      : '1.6px solid var(--ink)';
+
+  return (
+    <div
+      style={{
+        border,
+        background: bg,
+        borderRadius: 5,
+        padding: '10px 12px',
+        minHeight: 56,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        overflow: 'hidden',
+      }}
+    >
+      <span className="tiny">priority {slot}</span>
+      <span
+        className={cn('hand', isDone && 'strike')}
+        style={{
+          fontSize: 15,
+          fontWeight: 500,
+          color: isDone ? 'var(--ink-faint)' : 'var(--ink)',
+          lineHeight: 1.2,
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}
+      >
+        {task.title}
+      </span>
     </div>
   );
 }

@@ -22,7 +22,7 @@ import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
 import { LabelChips } from '@/components/labels/LabelChips';
-import type { Task } from '@/lib/idb/db';
+import type { Subtask, Task } from '@/lib/idb/db';
 
 interface TaskRowProps {
   task: Task;
@@ -133,7 +133,30 @@ export function TaskRow({
             )}
           >
             {task.title}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <span
+                className="ui muted"
+                style={{
+                  fontSize: 12,
+                  marginLeft: 8,
+                  letterSpacing: '0.04em',
+                  fontWeight: 600,
+                }}
+              >
+                {task.subtasks.filter((s) => s.done).length}/{task.subtasks.length}
+              </span>
+            )}
           </span>
+
+          {(task.start_time || task.end_time) && (
+            <span
+              className="mono num muted shrink-0"
+              style={{ fontSize: 11, letterSpacing: '0.04em' }}
+              title="scheduled time"
+            >
+              {task.start_time ?? '…'}{task.end_time ? `–${task.end_time}` : ''}
+            </span>
+          )}
 
           <LabelChips taskId={task.id} size="sm" />
 
@@ -242,6 +265,11 @@ export function TaskRow({
           >
             {task.description}
           </p>
+        )}
+
+        {/* Subtask checklist — quick toggle of each item */}
+        {task.subtasks && task.subtasks.length > 0 && (
+          <SubtaskList taskId={task.id} subtasks={task.subtasks} />
         )}
 
         {/* Completion note shown on done tasks */}
@@ -466,6 +494,79 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
           <MenuItem onClick={handleDelete} danger>delete</MenuItem>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Inline subtask checklist ──────────────────────────────────────────
+
+interface SubtaskListProps {
+  taskId: string;
+  subtasks: Subtask[];
+}
+
+function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
+  async function toggle(id: string) {
+    const next = subtasks.map((s) =>
+      s.id === id ? { ...s, done: !s.done } : s,
+    );
+    await updateTask(taskId, { subtasks: next });
+  }
+
+  return (
+    <div
+      className="col"
+      style={{ gap: 2, marginTop: 4, paddingLeft: 2 }}
+    >
+      {subtasks.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); void toggle(s.id); }}
+          className="row items-center hover:bg-paper-warm transition-colors"
+          style={{
+            gap: 8,
+            padding: '2px 6px',
+            borderRadius: 3,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 14,
+              height: 14,
+              border: '1.5px solid',
+              borderColor: s.done ? 'var(--sage-deep)' : 'var(--ink-faint)',
+              borderRadius: 3,
+              background: s.done ? 'var(--sage-deep)' : 'transparent',
+              color: 'var(--paper)',
+              fontSize: 10,
+              lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {s.done ? '✓' : ''}
+          </span>
+          <span
+            className={cn('hand', s.done && 'strike')}
+            style={{
+              fontSize: 15,
+              lineHeight: 1.25,
+              color: s.done ? 'var(--ink-faint)' : 'var(--ink)',
+            }}
+          >
+            {s.title}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

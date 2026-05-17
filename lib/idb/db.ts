@@ -33,6 +33,13 @@ export type WorkoutProgress = {
 /** Per-task label assignments — keyed by labelId for O(1) lookup. */
 export type LabelIdList = string[];
 
+/** Subtask checklist item. Stored as a jsonb array on the parent Task. */
+export interface Subtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface Task {
   id: string;
   user_id: string;
@@ -55,6 +62,11 @@ export interface Task {
   workout_progress?: WorkoutProgress | null;
   /** Cached array of label IDs. Source of truth is the task_labels table. */
   label_ids?: LabelIdList;
+  /** Optional checklist of subtasks. When present, the task acts as a folder. */
+  subtasks?: Subtask[] | null;
+  /** Optional time window for the task (HH:MM 24h, e.g. "09:00"). */
+  start_time?: string | null;
+  end_time?: string | null;
   created_at: number;
   updated_at: number;
 }

@@ -106,7 +106,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
 
           {view === 'range' && (
             <div className="col" style={{ gap: 24, marginTop: 28 }}>
-              <RangeView />
+              <RangeView userId={userId} />
               <Footer />
             </div>
           )}

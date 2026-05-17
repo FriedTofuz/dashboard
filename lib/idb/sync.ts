@@ -343,6 +343,9 @@ function remoteRowToTask(row: Record<string, unknown>): Task {
     skipped:          (row.skipped as boolean) ?? false,
     archived:         (row.archived as boolean) ?? false,
     workout_progress: (row.workout_progress as Task['workout_progress']) ?? null,
+    subtasks:         (row.subtasks as Task['subtasks']) ?? null,
+    start_time:       (row.start_time as string | null) ?? null,
+    end_time:         (row.end_time as string | null) ?? null,
     created_at:       new Date(row.created_at as string).getTime(),
     updated_at:       new Date(row.updated_at as string).getTime(),
   };

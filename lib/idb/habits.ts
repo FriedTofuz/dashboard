@@ -131,6 +131,9 @@ function taskToRemote(t: Task): Record<string, unknown> {
     skipped:          t.skipped,
     archived:         t.archived,
     workout_progress: t.workout_progress ?? null,
+    subtasks:         t.subtasks ?? null,
+    start_time:       t.start_time ?? null,
+    end_time:         t.end_time ?? null,
     created_at:       new Date(t.created_at).toISOString(),
     updated_at:       new Date(t.updated_at).toISOString(),
   };
