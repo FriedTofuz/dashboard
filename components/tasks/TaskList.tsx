@@ -112,10 +112,14 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
       ref={droppable.setNodeRef}
       className={cn('paper wobble transition-colors')}
       style={{
-        border: '1.5px solid var(--sage-deep)',
+        // "Flower pot" palette: stroke #7a4a3a, body #d9a991. Matches the
+        // sunflower's terracotta planter for visual continuity.
+        border: '1.5px solid #7a4a3a',
         borderRadius: 6,
         padding: '14px 22px',
-        background: droppable.isOver ? 'var(--sage-tint)' : 'var(--sage-tint)',
+        background: droppable.isOver
+          ? 'rgba(217, 169, 145, 0.32)'
+          : 'rgba(217, 169, 145, 0.18)',
         position: 'relative',
         minHeight: hasContent ? undefined : 110,
       }}
@@ -128,9 +132,9 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
           bottom: 8,
           left: 0,
           width: 3,
-          background: 'var(--sage)',
+          background: '#d9a991',
           borderRadius: 2,
-          opacity: 0.7,
+          opacity: 0.85,
         }}
       />
 

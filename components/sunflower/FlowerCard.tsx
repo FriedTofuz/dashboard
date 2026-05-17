@@ -3,6 +3,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Sunflower } from './Sunflower';
 import { getDb } from '@/lib/idb/db';
+import { useQuotes, quoteIndexForDay } from '@/lib/quotes';
+import { todayKey } from '@/lib/time/dayKey';
 import type { FlowerState } from '@/lib/compute/flowerState';
 
 interface FlowerCardProps {
@@ -13,6 +15,11 @@ interface FlowerCardProps {
   dayNumber?: number;
 }
 
+function pickQuote(quotes: string[], dayKey: string): string | null {
+  if (quotes.length === 0) return null;
+  return quotes[quoteIndexForDay(dayKey, quotes.length)];
+}
+
 const captions: Record<FlowerState, { state: string; rest: string }> = {
   thriving: { state: 'Thriving',  rest: ' — radiant today' },
   healthy:  { state: 'Healthy',   rest: ' — on pace, keep it up' },
@@ -20,7 +27,10 @@ const captions: Record<FlowerState, { state: string; rest: string }> = {
   wilting:  { state: 'Wilting',   rest: ' — one tiny task brings it back' },
 };
 
-export function FlowerCard({ state, userId, dayNumber }: FlowerCardProps) {
+export function FlowerCard({ state, dayKey, userId, dayNumber }: FlowerCardProps) {
+  const [quotes] = useQuotes();
+  const quote = pickQuote(quotes, dayKey ?? todayKey());
+
   // Compute "day N" as the count of distinct day records for this user.
   const dayRows = useLiveQuery(
     () =>
@@ -70,6 +80,23 @@ export function FlowerCard({ state, userId, dayNumber }: FlowerCardProps) {
           Day {computedDay}
         </span>
       </div>
+
+      {quote && (
+        <p
+          className="hand"
+          style={{
+            fontSize: 14,
+            lineHeight: 1.35,
+            color: 'var(--ink-soft)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            margin: '8px 12px 0',
+            opacity: 0.85,
+          }}
+        >
+          &ldquo;{quote}&rdquo;
+        </p>
+      )}
 
       <div
         className="flex-1 flex items-end justify-center"

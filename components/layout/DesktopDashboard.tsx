@@ -27,6 +27,7 @@ import { RangeView } from '@/components/range/RangeView';
 import { ArchiveView } from '@/components/archive/ArchiveView';
 import { DayLabelFilter } from '@/components/labels/DayLabelFilter';
 import { ManageLabelsModal } from '@/components/labels/ManageLabelsModal';
+import { QuotesManagerModal } from '@/components/system/QuotesManagerModal';
 import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
@@ -123,6 +124,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <ManageLabelsModal userId={userId} />
+      <QuotesManagerModal />
     </div>
   );
 }

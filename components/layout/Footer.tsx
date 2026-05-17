@@ -35,9 +35,9 @@ const kbdStyle: React.CSSProperties = {
 };
 
 export function Footer() {
-  const openEditor = useUiStore((s) => s.openEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
   const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
+  const setQuotesManagerOpen = useUiStore((s) => s.setQuotesManagerOpen);
   const setView = useUiStore((s) => s.setView);
   const view = useUiStore((s) => s.view);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
@@ -59,14 +59,6 @@ export function Footer() {
       <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
         <button
           type="button"
-          onClick={() => openEditor()}
-          className="wobble hover:bg-paper-warm transition-colors"
-          style={btnStyle}
-        >
-          + add task
-        </button>
-        <button
-          type="button"
           onClick={() => setHabitsEditorOpen(true)}
           className="wobble hover:bg-paper-warm transition-colors"
           style={btnStyle}
@@ -79,7 +71,15 @@ export function Footer() {
           className="wobble hover:bg-paper-warm transition-colors"
           style={btnStyle}
         >
-          + add labels
+          labels
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuotesManagerOpen(true)}
+          className="wobble hover:bg-paper-warm transition-colors"
+          style={btnStyle}
+        >
+          quotes
         </button>
         <button
           type="button"

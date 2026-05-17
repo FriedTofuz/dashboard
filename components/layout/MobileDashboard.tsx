@@ -29,6 +29,7 @@ import { RangeView } from '@/components/range/RangeView';
 import { ArchiveView } from '@/components/archive/ArchiveView';
 import { DayLabelFilter } from '@/components/labels/DayLabelFilter';
 import { ManageLabelsModal } from '@/components/labels/ManageLabelsModal';
+import { QuotesManagerModal } from '@/components/system/QuotesManagerModal';
 import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
@@ -42,7 +43,7 @@ interface MobileDashboardProps {
 }
 
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
-  { id: 'today', label: 'today', icon: '☀' },
+  { id: 'today', label: 'today', icon: '◉' },
   { id: 'range', label: 'range', icon: '◫' },
   { id: 'notepad', label: 'notes', icon: '✎' },
   { id: 'stats', label: 'stats', icon: '✿' },
@@ -69,7 +70,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <DndProvider>
         <main
           className="flex-1"
-          style={{ padding: '24px 20px 96px', minWidth: 0 }}
+          style={{ padding: '24px 20px 116px', minWidth: 0 }}
         >
           {tab === 'today' && (
             <div className="col" style={{ gap: 24 }}>
@@ -118,7 +119,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
                 dayKey={currentDayKey}
                 userId={userId}
               />
-              <StatsActionRow />
+              <StatsActionRow showCalendar={false} />
               <StatsCard
                 userId={userId}
                 dayKey={currentDayKey}
@@ -137,7 +138,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
             onClick={() => openEditor()}
             className="fixed wobble hover:bg-paper-warm transition-colors"
             style={{
-              bottom: 84,
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)',
               right: 20,
               background: 'var(--paper)',
               border: '1.5px solid var(--ink)',
@@ -155,13 +156,18 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
           </button>
         )}
 
-        {/* Bottom tab bar — §9 #4: terra underline + terra icon for active */}
+        {/* Bottom tab bar — floating, locked above safe-area, rounded card */}
         <nav
-          className="fixed left-0 right-0 bottom-0 paper no-print"
+          className="fixed paper wobble no-print"
           style={{
-            borderTop: '1px solid var(--ink-faint)',
-            paddingBottom: 'env(safe-area-inset-bottom)',
-            zIndex: 20,
+            left: 12,
+            right: 12,
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+            border: '1.5px solid var(--ink-soft)',
+            borderRadius: 12,
+            boxShadow: '0 6px 18px rgba(28, 24, 20, 0.18)',
+            transform: 'translateZ(0)',
+            zIndex: 30,
           }}
         >
           <div className="row items-stretch justify-around">
@@ -235,6 +241,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <ManageLabelsModal userId={userId} />
+      <QuotesManagerModal />
       <InstallPrompt />
     </div>
   );

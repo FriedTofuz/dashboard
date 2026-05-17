@@ -82,72 +82,68 @@ export function WorkoutHabitRow({ task, template }: Props) {
   return (
     <div className="col" style={{ gap: 0 }}>
       {/* Header row — matches TaskRow visual scale */}
-      <div className="flex items-start gap-3 py-1 group">
-        <span style={{ paddingTop: 4, flexShrink: 0 }}>
+      <div className="flex items-center gap-3 py-1 group" style={{ minHeight: 28 }}>
+        <span style={{ flexShrink: 0 }}>
           <HandCheckbox state={checkState} onClick={handleCheck} />
         </span>
 
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="flex-1 min-w-0 col text-left"
+          className="flex-1 min-w-0 flex items-center gap-3 text-left"
           style={{
             background: 'transparent',
             border: 'none',
             padding: 0,
             cursor: 'pointer',
-            minHeight: 24,
           }}
           aria-expanded={expanded}
         >
-          <div className="flex items-center gap-3 min-w-0" style={{ minHeight: 24 }}>
-            <span
-              className={cn(
-                'task-label flex-1 min-w-0',
-                task.state === 'done' && 'strike',
-              )}
-            >
-              <span style={{ marginRight: 6 }}>{expanded ? '▾' : '▸'}</span>
-              {task.title}
-              {plan.title && (
-                <span
-                  className="ui"
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--ochre-deep)',
-                    marginLeft: 8,
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {plan.title.toLowerCase()}
-                </span>
-              )}
-            </span>
-
-            {!isRestDay && (
+          <span
+            className={cn(
+              'task-label flex-1 min-w-0',
+              task.state === 'done' && 'strike',
+            )}
+          >
+            <span style={{ marginRight: 6 }}>{expanded ? '▾' : '▸'}</span>
+            {task.title}
+            {plan.title && (
               <span
-                className="hand num shrink-0"
+                className="ui"
                 style={{
-                  fontSize: 16,
-                  color: doneSets === totalSets ? 'var(--sage-deep)' : 'var(--ink-faint)',
-                  whiteSpace: 'nowrap',
+                  fontSize: 12,
+                  color: 'var(--ochre-deep)',
+                  marginLeft: 8,
+                  letterSpacing: '0.04em',
                 }}
               >
-                {doneSets}/{totalSets} sets
+                {plan.title.toLowerCase()}
               </span>
             )}
-          </div>
+          </span>
+
+          {!isRestDay && (
+            <span
+              className="hand num shrink-0"
+              style={{
+                fontSize: 16,
+                color: doneSets === totalSets ? 'var(--sage-deep)' : 'var(--ink-faint)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {doneSets}/{totalSets} sets
+            </span>
+          )}
         </button>
 
         {task.state !== 'done' && (
           <button
             type="button"
             onClick={handleTimer}
-            className="mono opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+            className="mono opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
             style={{
               color: isRunning ? 'var(--terra-deep)' : 'var(--ink-faint)',
               fontSize: 11,
-              paddingTop: 4,
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
