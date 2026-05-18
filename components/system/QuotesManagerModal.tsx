@@ -53,14 +53,13 @@ export function QuotesManagerModal() {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
       style={{ background: 'rgba(28, 24, 20, 0.45)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="quotes-title"
     >
       <div
-        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[90vh] overflow-y-auto"
-        style={{ maxWidth: 600 }}
+        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
+        style={{ maxWidth: 900 }}
       >
         <div className="row items-center justify-between">
           <h2 id="quotes-title" className="font-hand text-h2">quotes</h2>
@@ -78,7 +77,7 @@ export function QuotesManagerModal() {
           list. add your favorites; edit by clicking a line.
         </p>
 
-        <div className="col" style={{ gap: 6 }}>
+        <div className="col" style={{ gap: 2 }}>
           {quotes.length === 0 && (
             <p className="muted caption italic">no quotes yet — add one below.</p>
           )}
@@ -86,7 +85,7 @@ export function QuotesManagerModal() {
             <div
               key={i}
               className="row items-center"
-              style={{ gap: 8, padding: '4px 2px' }}
+              style={{ gap: 6, padding: '1px 2px' }}
             >
               {editingIndex === i ? (
                 <input
@@ -103,8 +102,10 @@ export function QuotesManagerModal() {
                   style={{
                     border: 'none',
                     borderBottom: '1.5px solid var(--ink-faint)',
-                    padding: '2px 4px',
+                    padding: '1px 4px',
                     outline: 'none',
+                    fontSize: 14,
+                    lineHeight: 1.25,
                   }}
                 />
               ) : (
@@ -112,16 +113,18 @@ export function QuotesManagerModal() {
                   type="button"
                   onClick={() => { setEditingIndex(i); setEditingText(q); }}
                   className={cn(
-                    'font-hand text-body flex-1 text-left hover:bg-paper-warm transition-colors',
+                    'font-hand flex-1 text-left hover:bg-paper-warm transition-colors',
                   )}
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    padding: '4px 6px',
+                    padding: '1px 6px',
                     borderRadius: 4,
                     cursor: 'text',
                     fontStyle: 'italic',
                     color: 'var(--ink-soft)',
+                    fontSize: 14,
+                    lineHeight: 1.25,
                   }}
                 >
                   &ldquo;{q}&rdquo;

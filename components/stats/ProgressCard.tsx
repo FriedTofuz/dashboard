@@ -13,6 +13,12 @@ interface ProgressCardProps {
   deficitSeconds?: number;
 }
 
+function formatHours(minutes: number): string {
+  const hrs = minutes / 60;
+  if (Number.isInteger(hrs)) return String(hrs);
+  return hrs.toFixed(hrs < 1 ? 2 : 1).replace(/\.?0+$/, '');
+}
+
 export function ProgressCard({ dayKey = todayKey(), deficitSeconds = 0 }: ProgressCardProps) {
   const tasks = useLiveQuery(
     () =>
@@ -61,7 +67,7 @@ export function ProgressCard({ dayKey = todayKey(), deficitSeconds = 0 }: Progre
 
       <div className="row items-center justify-between" style={{ marginTop: 8 }}>
         <span className="tiny num">
-          {estTotal}m estimated — {estDone}m logged
+          {estTotal}m/{formatHours(estTotal)}hr estimated — {estDone}m logged
         </span>
         {deficitSeconds > 0 && (
           <span className="tiny num" style={{ color: 'var(--terra-deep)' }}>
