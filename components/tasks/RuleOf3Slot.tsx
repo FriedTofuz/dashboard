@@ -13,6 +13,7 @@ import {
   duplicateTask,
   moveTaskToDay,
   createTask,
+  updateTask,
 } from '@/lib/idb/tasks';
 import { elapsedLabel, addDays, formatDayLabel } from '@/lib/time/dayKey';
 import { useTimerStore } from '@/lib/store/useTimerStore';
@@ -20,7 +21,7 @@ import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
 import { renderRichText } from '@/lib/richText';
-import type { Task } from '@/lib/idb/db';
+import type { Subtask, Task } from '@/lib/idb/db';
 
 interface RuleOf3SlotProps {
   slot: 1 | 2 | 3;
@@ -205,6 +206,10 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
           >
             {renderRichText(task.description)}
           </p>
+        )}
+
+        {task.subtasks && task.subtasks.length > 0 && (
+          <R3SubtaskList taskId={task.id} subtasks={task.subtasks} />
         )}
 
         {task.state === 'done' && task.completion_note && (
@@ -430,6 +435,74 @@ function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
           </SlotMenuItem>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Inline R3 subtask checklist ───────────────────────────────────────
+
+interface R3SubtaskListProps {
+  taskId: string;
+  subtasks: Subtask[];
+}
+
+function R3SubtaskList({ taskId, subtasks }: R3SubtaskListProps) {
+  async function toggle(id: string) {
+    const next = subtasks.map((s) => (s.id === id ? { ...s, done: !s.done } : s));
+    await updateTask(taskId, { subtasks: next });
+  }
+
+  return (
+    <div className="col" style={{ gap: 2, marginTop: 6 }}>
+      {subtasks.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); void toggle(s.id); }}
+          className="row items-center hover:bg-paper-warm transition-colors"
+          style={{
+            gap: 6,
+            padding: '1px 4px',
+            borderRadius: 4,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 12,
+              height: 12,
+              border: '1.5px solid',
+              borderColor: s.done ? 'var(--sage-deep)' : 'var(--ink-faint)',
+              borderRadius: 3,
+              background: s.done ? 'var(--sage-deep)' : 'transparent',
+              color: 'var(--paper)',
+              fontSize: 9,
+              lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {s.done ? '✓' : ''}
+          </span>
+          <span
+            className={cn('hand', s.done && 'strike')}
+            style={{
+              fontSize: 13,
+              lineHeight: 1.2,
+              color: s.done ? 'var(--ink-faint)' : 'var(--ink)',
+            }}
+          >
+            {s.title}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

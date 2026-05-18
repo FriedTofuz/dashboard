@@ -69,7 +69,6 @@ export function ScratchModal({ dayKey, userId }: ScratchModalProps) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(28, 24, 20, 0.45)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
       role="dialog"
       aria-modal="true"
       aria-label="Scratch notes"

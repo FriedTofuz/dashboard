@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -340,7 +341,7 @@ export function TaskRow({
         <p
           className="hand"
           style={{
-            fontSize: 15,
+            fontSize: 13,
             color: 'var(--ink-faint)',
             lineHeight: 1.3,
             margin: '2px 0 0',
@@ -390,19 +391,33 @@ interface TaskActionMenuProps {
 export function TaskActionMenu({ task }: TaskActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const openEditor = useUiStore((s) => s.openEditor);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setShowMoveSubmenu(false);
-      }
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+      setShowMoveSubmenu(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuWidth = 180;
+    setMenuPos({
+      top: rect.bottom + 4,
+      left: Math.max(8, rect.right - menuWidth),
+    });
   }, [open]);
 
   function close() { setOpen(false); setShowMoveSubmenu(false); }
@@ -482,6 +497,7 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         onPointerDown={(e) => e.stopPropagation()}
@@ -505,21 +521,21 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
         ⋯
       </button>
 
-      {open && (
+      {open && menuPos && typeof window !== 'undefined' && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 4,
+            position: 'fixed',
+            top: menuPos.top,
+            left: menuPos.left,
             background: 'var(--paper)',
             border: '1.5px solid var(--ink-soft)',
             borderRadius: 6,
             padding: 4,
-            minWidth: 170,
+            minWidth: 180,
             boxShadow: 'var(--shadow)',
-            zIndex: 20,
+            zIndex: 1000,
             fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
             fontSize: 13,
           }}
@@ -548,7 +564,8 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
           )}
           <div style={{ height: 1, background: 'var(--rule)', margin: '4px 0' }} />
           <MenuItem onClick={handleDelete} danger>delete</MenuItem>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -615,7 +632,7 @@ function SubtaskList({ taskId, subtasks, paddingLeft = 28 }: SubtaskListProps) {
           <span
             className={cn('hand', s.done && 'strike')}
             style={{
-              fontSize: 15,
+              fontSize: 13,
               lineHeight: 1.25,
               color: s.done ? 'var(--ink-faint)' : 'var(--ink)',
             }}

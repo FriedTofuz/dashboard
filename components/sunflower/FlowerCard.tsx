@@ -56,18 +56,27 @@ export function FlowerCard({ state, dayKey, userId, dayNumber }: FlowerCardProps
         boxSizing: 'border-box',
       }}
     >
-      <div className="row items-baseline justify-between">
-        <span
-          className="ui-b"
-          style={{
-            fontSize: 14,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--ink)',
-          }}
-        >
-          Your sunflower
-        </span>
+      <div className="row items-baseline justify-between" style={{ gap: 12 }}>
+        {quote ? (
+          <p
+            className="hand"
+            style={{
+              fontSize: 14,
+              lineHeight: 1.35,
+              color: 'var(--ink-soft)',
+              fontStyle: 'italic',
+              textAlign: 'left',
+              margin: 0,
+              opacity: 0.85,
+              flex: '1 1 auto',
+              minWidth: 0,
+            }}
+          >
+            &ldquo;{quote}&rdquo;
+          </p>
+        ) : (
+          <span style={{ flex: '1 1 auto' }} />
+        )}
         <span
           className="ui num"
           style={{
@@ -75,28 +84,12 @@ export function FlowerCard({ state, dayKey, userId, dayNumber }: FlowerCardProps
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: 'var(--ink-faint)',
+            flexShrink: 0,
           }}
         >
           Day {computedDay}
         </span>
       </div>
-
-      {quote && (
-        <p
-          className="hand"
-          style={{
-            fontSize: 14,
-            lineHeight: 1.35,
-            color: 'var(--ink-soft)',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            margin: '8px 12px 0',
-            opacity: 0.85,
-          }}
-        >
-          &ldquo;{quote}&rdquo;
-        </p>
-      )}
 
       <div
         className="flex-1 flex items-end justify-center"

@@ -71,12 +71,10 @@ export function ManageLabelsModal({ userId }: Props) {
     <div
       className="fixed inset-0 flex items-center justify-center p-6"
       style={{ background: 'rgba(0,0,0,0.25)', zIndex: 60 }}
-      onClick={() => setOpen(false)}
     >
       <div
-        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[90vh] overflow-y-auto"
-        style={{ maxWidth: 704 }}
-        onClick={(e) => e.stopPropagation()}
+        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
+        style={{ maxWidth: 704, minHeight: 'min(75vh, 640px)' }}
       >
         <div className="row items-center justify-between">
           <h2 className="font-hand text-h2">labels</h2>

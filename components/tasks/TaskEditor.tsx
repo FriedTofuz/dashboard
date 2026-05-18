@@ -244,7 +244,6 @@ export function TaskEditor({ userId }: TaskEditorProps) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(43,38,34,0.35)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <form
         onSubmit={handleSubmit}
@@ -272,8 +271,8 @@ export function TaskEditor({ userId }: TaskEditorProps) {
           />
         </div>
 
-        <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
-          <div className="col gap-1" style={{ flex: '0 0 120px' }}>
+        <div className="row" style={{ gap: 16, flexWrap: 'nowrap' }}>
+          <div className="col gap-1" style={{ flex: '1 1 0', minWidth: 0 }}>
             <label className="tiny">estimate (min)</label>
             <input
               type="number"
@@ -282,33 +281,33 @@ export function TaskEditor({ userId }: TaskEditorProps) {
               min="1"
               required
               className={cn(
-                'font-hand text-body bg-transparent border-b border-ink-faint py-1',
+                'font-hand text-body bg-transparent border-b border-ink-faint py-1 w-full',
                 'focus:outline-none focus:border-ink',
               )}
             />
           </div>
 
-          <div className="col gap-1" style={{ flex: '0 0 120px' }}>
+          <div className="col gap-1" style={{ flex: '1 1 0', minWidth: 0 }}>
             <label className="tiny">start (optional)</label>
             <input
               type="time"
               value={startTime}
               onChange={(e) => { setStartTime(e.target.value); setTimeError(null); }}
               className={cn(
-                'font-hand text-body bg-transparent border-b border-ink-faint py-1',
+                'font-hand text-body bg-transparent border-b border-ink-faint py-1 w-full',
                 'focus:outline-none focus:border-ink',
               )}
             />
           </div>
 
-          <div className="col gap-1" style={{ flex: '0 0 120px' }}>
+          <div className="col gap-1" style={{ flex: '1 1 0', minWidth: 0 }}>
             <label className="tiny">end (optional)</label>
             <input
               type="time"
               value={endTime}
               onChange={(e) => { setEndTime(e.target.value); setTimeError(null); }}
               className={cn(
-                'font-hand text-body bg-transparent border-b border-ink-faint py-1',
+                'font-hand text-body bg-transparent border-b border-ink-faint py-1 w-full',
                 'focus:outline-none focus:border-ink',
               )}
             />
@@ -463,14 +462,26 @@ export function TaskEditor({ userId }: TaskEditorProps) {
           <label className="tiny">notes (optional)</label>
           <textarea
             value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            onChange={(e) => {
+              setDesc(e.target.value);
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            ref={(el) => {
+              if (el) {
+                el.style.height = 'auto';
+                el.style.height = `${Math.max(el.scrollHeight, 6 * 24)}px`;
+              }
+            }}
             placeholder="sub-tasks, phone numbers, details…"
-            rows={3}
+            rows={6}
             className={cn(
               'font-hand text-body-sm bg-transparent border border-ink-faint rounded-input p-2',
-              'focus:outline-none focus:border-ink resize-none',
+              'focus:outline-none focus:border-ink',
               'placeholder:text-ink-faint',
             )}
+            style={{ minHeight: '8em', overflow: 'hidden', resize: 'vertical' }}
           />
         </div>
 

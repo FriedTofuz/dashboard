@@ -148,7 +148,7 @@
 .task-label {
   font-family: var(--font-hand), cursive;
   font-weight: 500;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.15;
   color: var(--ink);
 }
