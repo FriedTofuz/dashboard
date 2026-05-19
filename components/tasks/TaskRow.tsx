@@ -6,7 +6,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { HandCheckbox } from '@/components/ui/HandCheckbox';
-import { elapsedLabel, addDays, formatDayLabel } from '@/lib/time/dayKey';
+import { elapsedLabel, addDays, formatDayLabel, nextWeekday } from '@/lib/time/dayKey';
 import {
   uncompleteTask,
   startTimer,
@@ -488,9 +488,8 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
   const moveOptions = today
     ? [
         { label: 'tomorrow',     key: addDays(today, 1) },
-        { label: 'in 2 days',    key: addDays(today, 2) },
-        { label: 'next week',    key: addDays(today, 7) },
-        { label: 'yesterday',    key: addDays(today, -1) },
+        { label: 'friday',       key: nextWeekday(today, 5) },
+        { label: 'next monday',  key: nextWeekday(today, 1) },
       ]
     : [];
 

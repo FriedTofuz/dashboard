@@ -112,6 +112,9 @@ export function ArchiveView({ userId }: Props) {
       return taskIdToLabelIds.get(t.id)?.has(filterLabel) ?? false;
     };
     const list = (allTasks ?? []).filter((t) => {
+      // Hide habit instances — archive is for one-off / project work, not the
+      // daily template churn.
+      if (t.template_id != null) return false;
       const ym = dayKeyToYearMonth(t.day_key);
       if (filterYear !== 'all' && (!ym || ym.year !== filterYear)) return false;
       if (filterMonth !== 'all' && (!ym || ym.month !== filterMonth)) return false;
@@ -480,82 +483,184 @@ interface ArchiveTaskRowProps {
 }
 
 function ArchiveTaskRow({ task, onOpen, onEdit, onDelete }: ArchiveTaskRowProps) {
+  const [expanded, setExpanded] = useState(false);
+  const hasSubtasks = (task.subtasks?.length ?? 0) > 0;
+  const subtaskSummary = hasSubtasks
+    ? `${task.subtasks!.filter((s) => s.done).length}/${task.subtasks!.length}`
+    : null;
+
   return (
-    <div
-      className="row items-center group hover:bg-paper-warm transition-colors"
-      style={{
-        padding: '6px 10px',
-        borderRadius: 5,
-        gap: 8,
-      }}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="row items-center justify-between flex-1 min-w-0"
+    <div className="col" style={{ gap: 0 }}>
+      <div
+        className="row items-center group hover:bg-paper-warm transition-colors"
         style={{
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          textAlign: 'left',
-          gap: 12,
+          padding: '6px 10px',
+          borderRadius: 5,
+          gap: 8,
         }}
       >
-        <span
-          className={cn('hand', task.state === 'done' && 'strike opacity-80')}
-          style={{ fontSize: 20, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        >
-          {task.title}
-        </span>
-        <LabelChips taskId={task.id} size="sm" max={3} />
-        <span className="tiny num" style={{ flexShrink: 0 }}>
-          {task.day_key ?? 'backlog'}
-        </span>
-      </button>
-      <div
-        className="row opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
-        style={{ gap: 2, flexShrink: 0 }}
-      >
+        {hasSubtasks ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-label={expanded ? 'Hide subtasks' : 'Show subtasks'}
+            aria-expanded={expanded}
+            className="hover:bg-paper-warm transition-colors"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--ink-faint)',
+              fontSize: 11,
+              width: 18,
+              height: 18,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 3,
+              cursor: 'pointer',
+              flexShrink: 0,
+              lineHeight: 1,
+              transition: 'transform 0.12s ease',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}
+          >
+            ▸
+          </button>
+        ) : (
+          <span style={{ width: 18, height: 18, flexShrink: 0 }} aria-hidden />
+        )}
         <button
           type="button"
-          onClick={onEdit}
-          aria-label="Edit task"
-          title="Edit"
-          className="hover:bg-paper-warm transition-colors"
+          onClick={onOpen}
+          className="row items-center justify-between flex-1 min-w-0"
           style={{
-            border: 'none',
             background: 'transparent',
-            color: 'var(--ink-faint)',
-            fontSize: 14,
-            padding: 4,
-            borderRadius: 3,
+            border: 'none',
+            padding: 0,
             cursor: 'pointer',
-            lineHeight: 1,
+            textAlign: 'left',
+            gap: 12,
           }}
         >
-          ✎
+          <span
+            className={cn('hand', task.state === 'done' && 'strike opacity-80')}
+            style={{ fontSize: 20, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {task.title}
+            {subtaskSummary && (
+              <span
+                className="ui muted"
+                style={{
+                  fontSize: 12,
+                  marginLeft: 8,
+                  letterSpacing: '0.04em',
+                  fontWeight: 600,
+                }}
+              >
+                {subtaskSummary}
+              </span>
+            )}
+          </span>
+          <LabelChips taskId={task.id} size="sm" max={3} />
+          <span className="tiny num" style={{ flexShrink: 0 }}>
+            {task.day_key ?? 'backlog'}
+          </span>
         </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label="Delete task"
-          title="Delete"
-          className="hover:bg-paper-warm transition-colors"
-          style={{
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--terra-deep)',
-            fontSize: 14,
-            padding: 4,
-            borderRadius: 3,
-            cursor: 'pointer',
-            lineHeight: 1,
-          }}
+        <div
+          className="row opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+          style={{ gap: 2, flexShrink: 0 }}
         >
-          ✕
-        </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit task"
+            title="Edit"
+            className="hover:bg-paper-warm transition-colors"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--ink-faint)',
+              fontSize: 14,
+              padding: 4,
+              borderRadius: 3,
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            ✎
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label="Delete task"
+            title="Delete"
+            className="hover:bg-paper-warm transition-colors"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--terra-deep)',
+              fontSize: 14,
+              padding: 4,
+              borderRadius: 3,
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
+
+      {hasSubtasks && expanded && (
+        <ul
+          className="col"
+          style={{
+            margin: 0,
+            padding: '2px 0 6px 38px',
+            gap: 2,
+            listStyle: 'none',
+          }}
+        >
+          {task.subtasks!.map((s) => (
+            <li
+              key={s.id}
+              className="row items-center"
+              style={{ gap: 8, padding: '1px 0' }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 12,
+                  height: 12,
+                  border: '1.5px solid',
+                  borderColor: s.done ? 'var(--sage-deep)' : 'var(--ink-faint)',
+                  borderRadius: 3,
+                  background: s.done ? 'var(--sage-deep)' : 'transparent',
+                  color: 'var(--paper)',
+                  fontSize: 9,
+                  lineHeight: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {s.done ? '✓' : ''}
+              </span>
+              <span
+                className={cn('hand', s.done && 'strike')}
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.25,
+                  color: s.done ? 'var(--ink-faint)' : 'var(--ink)',
+                }}
+              >
+                {s.title}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
