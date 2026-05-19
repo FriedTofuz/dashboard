@@ -19,6 +19,8 @@ interface Props {
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Visual order with Monday first; storage indices stay JS-standard (Sun=0). */
+const WEEK_ORDER: number[] = [1, 2, 3, 4, 5, 6, 0];
 
 function newExerciseId(): string {
   return crypto.randomUUID();
@@ -332,7 +334,7 @@ export function HabitTemplatesEditor({ userId }: Props) {
               <div className="col gap-1">
                 <label className="tiny">days</label>
                 <div className="row gap-1">
-                  {DAY_LABELS.map((label, d) => (
+                  {WEEK_ORDER.map((d) => (
                     <button
                       key={d}
                       type="button"
@@ -344,7 +346,7 @@ export function HabitTemplatesEditor({ userId }: Props) {
                           : 'ink-box-soft',
                       )}
                     >
-                      {label}
+                      {DAY_LABELS[d]}
                     </button>
                   ))}
                 </div>
@@ -361,7 +363,8 @@ export function HabitTemplatesEditor({ userId }: Props) {
                   </span>
                 </div>
                 <div className="row gap-1" style={{ flexWrap: 'wrap' }}>
-                  {DAY_LABELS.map((label, d) => {
+                  {WEEK_ORDER.map((d) => {
+                    const label = DAY_LABELS[d];
                     const hasPlan =
                       (editing.workout_data?.[d]?.exercises.length ?? 0) > 0;
                     const isSelected = d === workoutDay;

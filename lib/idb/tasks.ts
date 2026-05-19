@@ -92,13 +92,21 @@ export async function heartbeatTimer(taskId: string): Promise<void> {
   await updateTask(taskId, { elapsed_ms: elapsed, started_at: ts });
 }
 
-export async function completeTask(taskId: string, note?: string): Promise<void> {
+export async function completeTask(
+  taskId: string,
+  note?: string,
+  overrideActualMs?: number,
+): Promise<void> {
   const ts = now();
   const db = getDb();
   const task = await db.tasks.get(taskId);
   if (!task) return;
 
-  const actualMs = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
+  const trackedMs = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
+  const actualMs =
+    overrideActualMs != null && Number.isFinite(overrideActualMs) && overrideActualMs >= 0
+      ? overrideActualMs
+      : trackedMs;
 
   await updateTask(taskId, {
     state: 'done',

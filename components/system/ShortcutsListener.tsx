@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { pauseTimer } from '@/lib/idb/tasks';
+import { todayKey } from '@/lib/time/dayKey';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
@@ -11,12 +12,14 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || t.isContentEditable;
 }
 
-/** Global keyboard shortcuts: n, space, /, ⌘K, esc. */
+/** Global keyboard shortcuts: n, t, space, /, ⌘K, esc. */
 export function ShortcutsListener() {
   const openEditor = useUiStore((s) => s.openEditor);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const closeEditor = useUiStore((s) => s.closeEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
+  const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
+  const setView = useUiStore((s) => s.setView);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -30,6 +33,12 @@ export function ShortcutsListener() {
       if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         openEditor();
+        return;
+      }
+      if (e.key === 't' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setCurrentDayKey(todayKey());
+        setView('today');
         return;
       }
       if (e.key === '/') {
@@ -61,7 +70,7 @@ export function ShortcutsListener() {
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [openEditor, setCommandPaletteOpen, closeEditor, setHabitsEditorOpen]);
+  }, [openEditor, setCommandPaletteOpen, closeEditor, setHabitsEditorOpen, setCurrentDayKey, setView]);
 
   return null;
 }

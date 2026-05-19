@@ -28,7 +28,7 @@ export function CalendarFrame({ userEmail }: CalendarFrameProps) {
   const src = userEmail
     ? `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(
         userEmail,
-      )}&ctz=${encodeURIComponent(tz)}&mode=WEEK&showTitle=0&showPrint=0&showCalendars=0`
+      )}&ctz=${encodeURIComponent(tz)}&mode=WEEK&wkst=2&showTitle=0&showPrint=0&showCalendars=0`
     : null;
 
   const [iframeOk, setIframeOk] = useState(true);

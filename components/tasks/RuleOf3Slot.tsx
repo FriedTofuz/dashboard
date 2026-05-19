@@ -146,7 +146,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       ref={setRef}
       {...sortable.attributes}
       className={cn(
-        'rounded-card relative transition-colors flex-1 col justify-between wobble group',
+        'rounded-card relative transition-colors flex-1 col wobble group',
       )}
       style={cardStyle}
       onDoubleClick={() => openEditor(task.id)}
@@ -174,10 +174,12 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       </div>
 
       {/* Drag-grab zone — covers the label so the user can grab anywhere on
-          the card EXCEPT the buttons in the corner */}
+          the card EXCEPT the buttons in the corner. Top-aligned content;
+          reserve bottom space so the absolute action buttons never sit on
+          top of the description / subtasks. */}
       <div
-        className="cursor-grab active:cursor-grabbing flex-1 flex flex-col justify-end"
-        style={{ minHeight: 0 }}
+        className="cursor-grab active:cursor-grabbing flex-1 flex flex-col justify-start"
+        style={{ minHeight: 0, marginTop: 8, paddingBottom: 36 }}
         {...(task.state !== 'done' ? sortable.listeners : {})}
       >
         <span

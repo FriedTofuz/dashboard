@@ -20,6 +20,17 @@ export function addDays(key: string, n: number): string {
   return toDayKey(date);
 }
 
+/**
+ * The next occurrence of `targetDow` (0=Sun..6=Sat) strictly after `key`.
+ * If `key` already falls on `targetDow`, this returns +7 (next week).
+ */
+export function nextWeekday(key: string, targetDow: number): string {
+  const date = fromDayKey(key);
+  const cur = date.getDay();
+  const delta = ((targetDow - cur + 7) % 7) || 7;
+  return addDays(key, delta);
+}
+
 export function formatDayLabel(key: string): { weekday: string; monthDay: string } {
   const date = fromDayKey(key);
   return {

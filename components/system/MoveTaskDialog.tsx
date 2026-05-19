@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useMoveTaskStore } from '@/lib/store/useMoveTaskStore';
 import { useUiStore } from '@/lib/store/useUiStore';
-import { addDays, formatDayLabel } from '@/lib/time/dayKey';
+import { addDays, formatDayLabel, nextWeekday } from '@/lib/time/dayKey';
 import { moveTaskToDay } from '@/lib/idb/tasks';
 import { toast } from '@/lib/store/useToastStore';
 
@@ -32,10 +32,10 @@ export function MoveTaskDialog() {
   const { monthDay: fromLabel } = formatDayLabel(options.fromDayKey);
 
   const choices: DayChoice[] = [
-    { label: 'today',     dayKey: todayKey },
-    { label: 'tomorrow',  dayKey: addDays(todayKey, 1) },
-    { label: 'in 2 days', dayKey: addDays(todayKey, 2) },
-    { label: 'next week', dayKey: addDays(todayKey, 7) },
+    { label: 'today',          dayKey: todayKey },
+    { label: 'tomorrow',       dayKey: addDays(todayKey, 1) },
+    { label: 'this/next fri',  dayKey: nextWeekday(todayKey, 5) },
+    { label: 'next monday',    dayKey: nextWeekday(todayKey, 1) },
   ];
 
   async function pick(choice: DayChoice) {
