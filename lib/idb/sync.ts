@@ -56,6 +56,15 @@ export async function flushQueue(): Promise<void> {
 }
 
 // ── Pullers ────────────────────────────────────────────────────────────────
+//
+// Note: pulls intentionally fetch ALL rows for the user (no `updated_at >
+// since` watermark). The previous watermark used the local max(updated_at),
+// but `updated_at` is client-supplied — so a device with a fast clock would
+// set a high watermark, then filter out rows written by other devices whose
+// (correct) clocks produced lower timestamps. That caused one-way sync.
+// Data volume per user is small enough that pulling the full set every time
+// is the safer choice. Per-row LWW conflict resolution still avoids
+// clobbering newer local edits.
 
 async function pullTable<T>(
   table: 'tasks' | 'habit_templates' | 'days' | 'notepad_pages',
@@ -63,18 +72,14 @@ async function pullTable<T>(
   toLocal: (row: Record<string, unknown>) => T,
   getId: (row: T) => string,
   getUpdatedAt: (row: T) => number,
-  localMaxUpdatedAt: () => Promise<number>,
   put: (row: T) => Promise<unknown>,
 ): Promise<void> {
   const supabase = createClient();
-  const localMax = await localMaxUpdatedAt();
-  const since = localMax > 0 ? new Date(localMax).toISOString() : '1970-01-01T00:00:00Z';
 
   const { data, error } = await supabase
     .from(table)
     .select('*')
-    .eq('user_id', userId)
-    .gt('updated_at', since);
+    .eq('user_id', userId);
 
   if (error) {
     console.warn(`[sync] pull ${table} failed`, error);
@@ -83,8 +88,8 @@ async function pullTable<T>(
 
   const db = getDb();
   for (const row of data ?? []) {
-    const local = await db.table(table).get(getId(toLocal(row)));
     const remote = toLocal(row);
+    const local = await db.table(table).get(getId(remote));
     if (!local || getUpdatedAt(remote) > getUpdatedAt(local as T)) {
       await put(remote);
     }
@@ -99,10 +104,6 @@ export async function pullTasks(userId: string): Promise<void> {
     remoteRowToTask,
     (r) => r.id,
     (r) => r.updated_at,
-    async () => {
-      const rows = await db.tasks.where('user_id').equals(userId).toArray();
-      return Math.max(0, ...rows.map((r) => r.updated_at));
-    },
     (r) => db.tasks.put(r),
   );
 }
@@ -144,10 +145,6 @@ export async function pullNotepad(userId: string): Promise<void> {
     remoteRowToNotepadPage,
     (r) => r.id,
     (r) => r.updated_at,
-    async () => {
-      const rows = await db.notepad_pages.where('user_id').equals(userId).toArray();
-      return Math.max(0, ...rows.map((r) => r.updated_at));
-    },
     (r) => db.notepad_pages.put(r),
   );
 }
@@ -286,12 +283,9 @@ export function subscribeRealtime(userId: string): () => void {
 
 // ── Orchestrator ───────────────────────────────────────────────────────────
 
-let _booted = false;
-
-export async function bootSync(userId: string): Promise<() => void> {
-  if (_booted) return () => {};
-  _booted = true;
-
+/** Pull every table for the user, in parallel. Safe to call any time
+ *  (e.g. on visibility-change) to catch up if realtime missed events. */
+export async function pullAll(userId: string): Promise<void> {
   await Promise.all([
     pullSettings(userId),
     pullHabits(userId),
@@ -301,6 +295,15 @@ export async function bootSync(userId: string): Promise<() => void> {
     pullLabels(userId),
     pullTaskLabels(userId),
   ]);
+}
+
+let _booted = false;
+
+export async function bootSync(userId: string): Promise<() => void> {
+  if (_booted) return () => {};
+  _booted = true;
+
+  await pullAll(userId);
 
   await flushQueue();
   const unsubscribe = subscribeRealtime(userId);
@@ -310,12 +313,21 @@ export async function bootSync(userId: string): Promise<() => void> {
     if (navigator.onLine) void flushQueue();
   }, 15_000);
 
-  const onlineHandler = () => void flushQueue();
+  // Periodic re-pull (safety net if realtime websocket silently drops).
+  const pullInterval = window.setInterval(() => {
+    if (navigator.onLine) void pullAll(userId);
+  }, 60_000);
+
+  const onlineHandler = () => {
+    void flushQueue();
+    void pullAll(userId);
+  };
   window.addEventListener('online', onlineHandler);
 
   return () => {
     unsubscribe();
     window.clearInterval(interval);
+    window.clearInterval(pullInterval);
     window.removeEventListener('online', onlineHandler);
     _booted = false;
   };
