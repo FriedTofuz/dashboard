@@ -26,11 +26,38 @@ export async function updateHabit(id: string, changes: Partial<HabitTemplate>): 
 }
 
 export async function deleteHabit(id: string): Promise<void> {
-  await getDb().habit_templates.delete(id);
+  const db = getDb();
+  // Cascade: kill any non-done instances pointing at this template (today,
+  // future, and abandoned past instances). Done instances stay so history /
+  // stats are preserved.
+  const orphanInstances = await db.tasks
+    .where('template_id')
+    .equals(id)
+    .filter((t) => t.state !== 'done')
+    .toArray();
+  for (const inst of orphanInstances) {
+    await db.tasks.delete(inst.id);
+    enqueue('delete', 'tasks', inst.id, null);
+  }
+  // Also clear template_id on done instances so they survive the template
+  // delete on other devices (which would otherwise FK-cascade them away).
+  const doneInstances = await db.tasks
+    .where('template_id')
+    .equals(id)
+    .filter((t) => t.state === 'done')
+    .toArray();
+  for (const inst of doneInstances) {
+    const ts = Date.now();
+    await db.tasks.update(inst.id, { template_id: null, updated_at: ts });
+    const updated = await db.tasks.get(inst.id);
+    if (updated) enqueue('upsert', 'tasks', inst.id, taskToRemote(updated));
+  }
+  await db.habit_templates.delete(id);
   enqueue('delete', 'habit_templates', id, null);
 }
 
-/** Materialize habit instances for `dayKey` — idempotent. */
+/** Materialize habit instances for `dayKey` — idempotent, and dedupes any
+ *  duplicate instances that may have crept in via concurrent device writes. */
 export async function ensureHabitInstances(dayKey: string, userId: string): Promise<void> {
   const db = getDb();
 
@@ -39,6 +66,41 @@ export async function ensureHabitInstances(dayKey: string, userId: string): Prom
     .equals(userId)
     .filter((h) => h.active && isHabitScheduledFor(h.recurrence, h.recurrence_days, dayKey))
     .toArray();
+
+  // First pass: dedupe any pre-existing duplicates for this day. If two
+  // devices both ran ensureHabitInstances before sync, we can end up with
+  // multiple tasks sharing [user_id+template_id+day_key]. Keep the most
+  // "progressed" one (done > running/paused > open) and drop the rest.
+  const existingForDay = await db.tasks
+    .where('day_key')
+    .equals(dayKey)
+    .filter((t) => t.user_id === userId && t.template_id != null)
+    .toArray();
+
+  const buckets = new Map<string, Task[]>();
+  for (const inst of existingForDay) {
+    const key = inst.template_id ?? '';
+    let arr = buckets.get(key);
+    if (!arr) { arr = []; buckets.set(key, arr); }
+    arr.push(inst);
+  }
+  const statePriority: Record<string, number> = {
+    done: 3, running: 2, paused: 2, open: 1,
+  };
+  const buckedValues = Array.from(buckets.values());
+  for (const arr of buckedValues) {
+    if (arr.length <= 1) continue;
+    arr.sort((a: Task, b: Task) => {
+      const pa = statePriority[a.state] ?? 0;
+      const pb = statePriority[b.state] ?? 0;
+      if (pa !== pb) return pb - pa;
+      return a.created_at - b.created_at; // older wins on tie
+    });
+    for (const dup of arr.slice(1)) {
+      await db.tasks.delete(dup.id);
+      enqueue('delete', 'tasks', dup.id, null);
+    }
+  }
 
   for (const tmpl of templates) {
     const existing = await db.tasks

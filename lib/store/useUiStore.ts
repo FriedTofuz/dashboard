@@ -3,6 +3,30 @@ import { todayKey } from '@/lib/time/dayKey';
 
 export type View = 'today' | 'range' | 'archive';
 
+const DAY_KEY_STORAGE = 'sunflower:lastDayKey';
+
+/** Read the persisted day key from sessionStorage (refresh-survival),
+ *  validating it looks like YYYY-MM-DD. Returns today if absent / malformed. */
+function loadInitialDayKey(): string {
+  if (typeof window === 'undefined') return todayKey();
+  try {
+    const raw = window.sessionStorage.getItem(DAY_KEY_STORAGE);
+    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  } catch {
+    // sessionStorage can throw in private-mode iframes; fall back to today.
+  }
+  return todayKey();
+}
+
+function persistDayKey(key: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(DAY_KEY_STORAGE, key);
+  } catch {
+    /* ignore */
+  }
+}
+
 interface UiState {
   currentDayKey: string;
   setCurrentDayKey: (key: string) => void;
@@ -45,6 +69,10 @@ interface UiState {
   commandPaletteOpen: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
 
+  /** Global task search modal — open from the Search button. */
+  taskSearchOpen: boolean;
+  setTaskSearchOpen: (open: boolean) => void;
+
   syncStatus: 'idle' | 'syncing' | 'error';
   setSyncStatus: (s: 'idle' | 'syncing' | 'error') => void;
 
@@ -53,8 +81,11 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>()((set) => ({
-  currentDayKey: todayKey(),
-  setCurrentDayKey: (key) => set({ currentDayKey: key }),
+  currentDayKey: loadInitialDayKey(),
+  setCurrentDayKey: (key) => {
+    persistDayKey(key);
+    set({ currentDayKey: key });
+  },
 
   view: 'today',
   setView: (v) => set({ view: v }),
@@ -91,6 +122,9 @@ export const useUiStore = create<UiState>()((set) => ({
 
   commandPaletteOpen: false,
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+
+  taskSearchOpen: false,
+  setTaskSearchOpen: (open) => set({ taskSearchOpen: open }),
 
   syncStatus: 'idle',
   setSyncStatus: (s) => set({ syncStatus: s }),

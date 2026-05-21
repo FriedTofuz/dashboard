@@ -46,9 +46,42 @@ function StatChip({ label, value, accent }: StatChipProps) {
   );
 }
 
+/** Lerp from red (0%) → yellow (50%) → green (100%). Returns an rgb string. */
+function gradientColor(pct: number, hasContent: boolean): string {
+  if (!hasContent) {
+    // Empty / habit-only day — neutral wash, no opinion.
+    return 'rgba(180, 170, 158, 0.18)';
+  }
+  const p = Math.max(0, Math.min(100, pct));
+  // Stops: red #cf4f3a, yellow #e8b048, green #6b8a5c
+  const red = [207, 79, 58];
+  const yellow = [232, 176, 72];
+  const green = [107, 138, 92];
+  let from: number[];
+  let to: number[];
+  let t: number;
+  if (p <= 50) {
+    from = red;
+    to = yellow;
+    t = p / 50;
+  } else {
+    from = yellow;
+    to = green;
+    t = (p - 50) / 50;
+  }
+  const r = Math.round(from[0] + (to[0] - from[0]) * t);
+  const g = Math.round(from[1] + (to[1] - from[1]) * t);
+  const b = Math.round(from[2] + (to[2] - from[2]) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function gradientBorder(pct: number, hasContent: boolean): string {
+  if (!hasContent) return '1px solid var(--ink-faint)';
+  return `1px solid ${gradientColor(pct, true)}`;
+}
+
 export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: StatsCardProps) {
-  const { todayPct, weekAvgPct, streakDays, heatmap } = useStats(dayKey);
-  const streakLen = streakDays.filter(Boolean).length;
+  const { todayPct, weekAvgPct, streakHeat, streakLen, heatmap } = useStats(dayKey);
 
   const distinctDays = useLiveQuery(
     () => getDb().days.where('user_id').equals(userId).count(),
@@ -66,15 +99,10 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
     );
   }
 
-  // Build the streak squares. On desktop: up to 14, single row, ochre-gradient
-  // tied to completion intensity. On mobile (§9): 30 squares in 15×2 grid.
-  const streakDesktopCount = 14;
-  const streakSquares = mobile
-    ? heatmap.slice(-30)
-    : streakDays.slice(-streakDesktopCount).map((done) => ({
-        day: '',
-        pct: done ? 95 : 25,
-      }));
+  // Desktop: 14 most-recent days, chronological (oldest left → today right).
+  // Mobile: 30 most-recent days in a 15×2 grid, also chronological.
+  const desktopSquares = streakHeat.slice().reverse();
+  const mobileSquares = heatmap.slice(-30).reverse();
 
   return (
     <PaperCard variant="soft" style={{ padding: '20px 24px' }}>
@@ -95,7 +123,7 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
           />
         </div>
 
-        {/* Streak row — ochre tint per §3, 16×16 desktop, 15×2 mobile per §9 */}
+        {/* Streak row — red→yellow→green per per-day completion %. */}
         <div
           className="row items-center"
           style={{
@@ -119,50 +147,42 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                 flex: 1,
               }}
             >
-              {streakSquares.map((d, i) => {
-                const intensity = Math.min(1, d.pct / 100);
-                const alpha = (0.2 + intensity * 0.8).toFixed(2);
-                return (
-                  <div
-                    key={i}
-                    className="wobble"
-                    title={d.day ? `${d.day} · ${d.pct}%` : undefined}
-                    style={{
-                      aspectRatio: '1 / 1',
-                      borderRadius: 2,
-                      border: '1px solid var(--ochre-deep)',
-                      background: `rgba(201, 138, 46, ${alpha})`,
-                    }}
-                  />
-                );
-              })}
+              {mobileSquares.map((d, i) => (
+                <div
+                  key={i}
+                  className="wobble"
+                  title={d.hasContent ? `${d.day} · ${d.pct}%` : `${d.day} · no tasks`}
+                  style={{
+                    aspectRatio: '1 / 1',
+                    borderRadius: 2,
+                    border: gradientBorder(d.pct, d.hasContent),
+                    background: gradientColor(d.pct, d.hasContent),
+                  }}
+                />
+              ))}
             </div>
           ) : (
             <div className="row" style={{ gap: 4, flex: 1 }}>
-              {streakSquares.map((d, i) => {
-                const intensity = Math.min(1, d.pct / 100);
-                const alpha = (0.2 + intensity * 0.8).toFixed(2);
-                return (
-                  <div
-                    key={i}
-                    className="wobble"
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 2,
-                      border: '1px solid var(--ochre-deep)',
-                      background: `rgba(201, 138, 46, ${alpha})`,
-                    }}
-                    aria-hidden
-                  />
-                );
-              })}
+              {desktopSquares.map((d, i) => (
+                <div
+                  key={i}
+                  className="wobble"
+                  title={d.hasContent ? `${d.day} · ${d.pct}%` : `${d.day} · no tasks`}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 2,
+                    border: gradientBorder(d.pct, d.hasContent),
+                    background: gradientColor(d.pct, d.hasContent),
+                  }}
+                />
+              ))}
             </div>
           )}
           {streakLen > 0 && (
             <span
               className="ui-b num"
-              style={{ color: 'var(--ochre-deep)', fontSize: 14 }}
+              style={{ color: 'var(--sage-deep)', fontSize: 14 }}
             >
               {streakLen} days
             </span>

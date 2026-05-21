@@ -57,10 +57,11 @@ export function TopBar() {
   }
 
   return (
-    <div className="row items-start justify-between mb-1 gap-6 flex-wrap">
-      {/* Date display — 52px Caveat with terra wobble underline */}
-      <div className="col gap-1.5">
-        <span className="tiny">{weekday}</span>
+    <div className="row items-end justify-between mb-1 gap-6 flex-wrap">
+      {/* Date display — Month Day on the same baseline as the date pills,
+          with the weekday tucked inline (small caps) to the left of the title. */}
+      <div className="row items-baseline" style={{ gap: 12 }}>
+        <span className="tiny" style={{ letterSpacing: '0.14em' }}>{weekday}</span>
         <h1
           className="font-hand v2-date-display"
           style={{
@@ -70,6 +71,7 @@ export function TopBar() {
             position: 'relative',
             display: 'inline-block',
             paddingBottom: 6,
+            margin: 0,
           }}
         >
           <span className="underline-hand">{monthDay}</span>

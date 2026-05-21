@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { pauseTimer } from '@/lib/idb/tasks';
-import { todayKey } from '@/lib/time/dayKey';
+import { addDays, nextWeekday, todayKey } from '@/lib/time/dayKey';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
@@ -39,6 +39,26 @@ export function ShortcutsListener() {
         e.preventDefault();
         setCurrentDayKey(todayKey());
         setView('today');
+        return;
+      }
+      if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        // Jump to the COMING Friday (5 = Fri). If today is Friday, this lands
+        // on next week's Friday — matches the move-to-day behavior.
+        setCurrentDayKey(nextWeekday(todayKey(), 5));
+        setView('today');
+        return;
+      }
+      if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const cur = useUiStore.getState().currentDayKey;
+        setCurrentDayKey(addDays(cur, -1));
+        return;
+      }
+      if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const cur = useUiStore.getState().currentDayKey;
+        setCurrentDayKey(addDays(cur, 1));
         return;
       }
       if (e.key === '/') {

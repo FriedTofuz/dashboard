@@ -6,7 +6,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { HandCheckbox } from '@/components/ui/HandCheckbox';
-import { elapsedLabel, addDays, formatDayLabel, nextWeekday } from '@/lib/time/dayKey';
+import { elapsedLabel, addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
 import {
   uncompleteTask,
   startTimer,
@@ -278,6 +278,26 @@ export function TaskRow({
               />
               <span className="hand" style={{ fontSize: 17, color: 'var(--ink-faint)' }}>min</span>
             </span>
+          ) : task.state === 'paused' && task.elapsed_ms > 0 ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setEditingEst(true); }}
+              className="hand num shrink-0 hover:bg-paper-warm transition-colors"
+              style={{
+                fontSize: 17,
+                color: 'var(--ink-faint)',
+                whiteSpace: 'nowrap',
+                background: 'transparent',
+                border: '1px solid transparent',
+                borderRadius: 4,
+                padding: '0 4px',
+                cursor: 'text',
+              }}
+              title="Paused · click to edit estimate"
+            >
+              — {Math.round(task.elapsed_ms / 60000)}m/{task.est_minutes}m
+            </button>
           ) : (
             <button
               type="button"
@@ -487,9 +507,10 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
   const today = task.day_key ?? '';
   const moveOptions = today
     ? [
-        { label: 'tomorrow',     key: addDays(today, 1) },
-        { label: 'friday',       key: nextWeekday(today, 5) },
-        { label: 'next monday',  key: nextWeekday(today, 1) },
+        { label: 'yesterday', key: addDays(today, -1) },
+        { label: 'today',     key: todayKey() },
+        { label: 'tomorrow',  key: addDays(today, 1) },
+        { label: 'friday',    key: nextWeekday(today, 5) },
       ]
     : [];
 

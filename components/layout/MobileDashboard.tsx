@@ -22,6 +22,7 @@ import { TimerProvider } from '@/components/timer/TimerProvider';
 import { BootProvider } from '@/components/system/BootProvider';
 import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
+import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
@@ -34,6 +35,7 @@ import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { getDb } from '@/lib/idb/db';
+import { todayKey } from '@/lib/time/dayKey';
 import { cn } from '@/lib/utils';
 
 type Tab = 'today' | 'range' | 'notepad' | 'stats' | 'archive';
@@ -59,7 +61,10 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
 
   const settings = useLiveQuery(() => getDb().settings.get(userId), [userId]);
   const deficitSeconds = settings?.deficit_seconds ?? 0;
-  const flowerState = useFlowerState(currentDayKey, deficitSeconds);
+  // Sunflower is locked to TODAY — its state and quote shouldn't shift when
+  // the user is browsing a past or future day.
+  const today = todayKey();
+  const flowerState = useFlowerState(today, deficitSeconds);
 
   return (
     <div className="min-h-screen col">
@@ -116,7 +121,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
               </h2>
               <FlowerCard
                 state={flowerState}
-                dayKey={currentDayKey}
+                dayKey={today}
                 userId={userId}
               />
               <StatsActionRow showCalendar={false} />
@@ -240,6 +245,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <MoveTaskDialog />
       <ConfirmDialog />
       <CommandPalette userId={userId} />
+      <TaskSearchModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />
