@@ -130,7 +130,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
-      <SettingsModal />
+      <SettingsModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

@@ -70,7 +70,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       <div
         ref={droppable.setNodeRef}
         className={cn(
-          'rounded-card transition-colors flex-1 col justify-between wobble',
+          'r3-card rounded-card transition-colors flex-1 col justify-between wobble',
           droppable.isOver && 'wash-sage',
         )}
         style={{
@@ -146,7 +146,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
       ref={setRef}
       {...sortable.attributes}
       className={cn(
-        'rounded-card relative transition-colors flex-1 col wobble group',
+        'r3-card rounded-card relative transition-colors flex-1 col wobble group',
       )}
       style={cardStyle}
       onDoubleClick={() => openEditor(task.id)}

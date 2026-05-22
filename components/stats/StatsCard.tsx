@@ -5,6 +5,7 @@ import { PaperCard } from '@/components/ui/PaperCard';
 import { formatDeficit } from '@/lib/compute/deficit';
 import { useStats } from '@/lib/hooks/useStats';
 import { getDb } from '@/lib/idb/db';
+import { useAccentStore } from '@/lib/store/useAccentStore';
 
 interface StatsCardProps {
   userId: string;
@@ -18,15 +19,20 @@ interface StatChipProps {
   label: string;
   value: string;
   accent: 'ink' | 'sage' | 'terra';
+  /** When true, sage/terra accents both resolve to Berkeley blue (#002676)
+   *  so all colored stat numbers share a single hue. */
+  berkeley?: boolean;
 }
 
-function StatChip({ label, value, accent }: StatChipProps) {
+function StatChip({ label, value, accent, berkeley = false }: StatChipProps) {
   const color =
-    accent === 'sage'
-      ? 'var(--sage-deep)'
-      : accent === 'terra'
-        ? 'var(--terra-deep)'
-        : 'var(--ink)';
+    accent === 'ink'
+      ? 'var(--ink)'
+      : berkeley
+        ? 'var(--terra-deep)' // = #002676 under Berkeley accent
+        : accent === 'sage'
+          ? 'var(--sage-deep)'
+          : 'var(--terra-deep)';
   return (
     <div className="col" style={{ gap: 6 }}>
       <span className="tiny" style={{ letterSpacing: '0.14em' }}>{label}</span>
@@ -46,8 +52,15 @@ function StatChip({ label, value, accent }: StatChipProps) {
   );
 }
 
-/** Lerp from red (0%) → yellow (50%) → green (100%). Returns an rgb string. */
-function gradientColor(pct: number, hasContent: boolean, logged: boolean): string {
+/** Lerp from red (0%) → yellow (50%) → green (100%) by default. Under the
+ *  Berkeley accent, lerp pale blue → mid blue → Berkeley blue (#002676)
+ *  so the streak reads as "darker blue = more done". */
+function gradientColor(
+  pct: number,
+  hasContent: boolean,
+  logged: boolean,
+  berkeley: boolean,
+): string {
   if (!hasContent || !logged) {
     // Empty / habit-only day OR unlogged day — neutral wash, no opinion.
     // Logging is opt-in so stats only reflect days the user explicitly
@@ -55,20 +68,33 @@ function gradientColor(pct: number, hasContent: boolean, logged: boolean): strin
     return 'rgba(180, 170, 158, 0.18)';
   }
   const p = Math.max(0, Math.min(100, pct));
-  // Stops: red #cf4f3a, yellow #e8b048, green #6b8a5c
-  const red = [207, 79, 58];
-  const yellow = [232, 176, 72];
-  const green = [107, 138, 92];
+
+  let lowStop: number[];
+  let midStop: number[];
+  let highStop: number[];
+
+  if (berkeley) {
+    // Three blue stops centered on Berkeley blue #002676 at high completion.
+    // Lighter at lower %; cleanly distinguishable side-by-side.
+    lowStop  = [196, 208, 230]; // #C4D0E6 — pale blue
+    midStop  = [ 95, 121, 175]; // #5F79AF — mid blue
+    highStop = [  0,  38, 118]; // #002676 — Berkeley blue
+  } else {
+    lowStop  = [207,  79,  58]; // red
+    midStop  = [232, 176,  72]; // yellow
+    highStop = [107, 138,  92]; // green
+  }
+
   let from: number[];
   let to: number[];
   let t: number;
   if (p <= 50) {
-    from = red;
-    to = yellow;
+    from = lowStop;
+    to = midStop;
     t = p / 50;
   } else {
-    from = yellow;
-    to = green;
+    from = midStop;
+    to = highStop;
     t = (p - 50) / 50;
   }
   const r = Math.round(from[0] + (to[0] - from[0]) * t);
@@ -77,13 +103,19 @@ function gradientColor(pct: number, hasContent: boolean, logged: boolean): strin
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-function gradientBorder(pct: number, hasContent: boolean, logged: boolean): string {
+function gradientBorder(
+  pct: number,
+  hasContent: boolean,
+  logged: boolean,
+  berkeley: boolean,
+): string {
   if (!hasContent || !logged) return '1px solid var(--ink-faint)';
-  return `1px solid ${gradientColor(pct, true, true)}`;
+  return `1px solid ${gradientColor(pct, true, true, berkeley)}`;
 }
 
 export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: StatsCardProps) {
   const { todayPct, weekAvgPct, streakHeat, streakLen, heatmap } = useStats(dayKey);
+  const berkeley = useAccentStore((s) => s.accent === 'berkeley');
 
   const distinctDays = useLiveQuery(
     () => getDb().days.where('user_id').equals(userId).count(),
@@ -116,12 +148,13 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
             gap: 24,
           }}
         >
-          <StatChip label="Today" value={`${todayPct}%`} accent="ink" />
-          <StatChip label="Week avg" value={`${weekAvgPct}%`} accent="sage" />
+          <StatChip label="Today" value={`${todayPct}%`} accent="ink" berkeley={berkeley} />
+          <StatChip label="Week avg" value={`${weekAvgPct}%`} accent="sage" berkeley={berkeley} />
           <StatChip
             label="Time deficit"
             value={formatDeficit(deficitSeconds)}
             accent={deficitSeconds > 0 ? 'terra' : 'sage'}
+            berkeley={berkeley}
           />
         </div>
 
@@ -163,8 +196,8 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                   style={{
                     aspectRatio: '1 / 1',
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent, d.logged),
-                    background: gradientColor(d.pct, d.hasContent, d.logged),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley),
+                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley),
                   }}
                 />
               ))}
@@ -186,8 +219,8 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                     width: 16,
                     height: 16,
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent, d.logged),
-                    background: gradientColor(d.pct, d.hasContent, d.logged),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley),
+                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley),
                   }}
                 />
               ))}
@@ -196,7 +229,12 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
           {streakLen > 0 && (
             <span
               className="ui-b num"
-              style={{ color: 'var(--sage-deep)', fontSize: 14 }}
+              style={{
+                // Under Berkeley, all stat colors collapse to Berkeley blue
+                // (= --terra-deep) so the streak count matches the chips.
+                color: berkeley ? 'var(--terra-deep)' : 'var(--sage-deep)',
+                fontSize: 14,
+              }}
             >
               {streakLen} days
             </span>
