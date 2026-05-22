@@ -20,6 +20,7 @@ export function StatsActionRow({
 }: StatsActionRowProps) {
   const router = useRouter();
   const setScratchOpen = useUiStore((s) => s.setScratchOpen);
+  const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
 
   return (
     <div
@@ -49,7 +50,11 @@ export function StatsActionRow({
         onClick={() => window.open(journalUrl, '_blank', 'noopener,noreferrer')}
         aria-label="Open daily journal"
       />
-      <ActionButton placeholder />
+      <ActionButton
+        label="Search"
+        onClick={() => setTaskSearchOpen(true)}
+        aria-label="Search all tasks"
+      />
     </div>
   );
 }

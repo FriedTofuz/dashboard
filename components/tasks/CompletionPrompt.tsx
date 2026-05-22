@@ -30,16 +30,23 @@ export function CompletionPrompt() {
     return Math.max(0, Math.round(trackedMs / 60000));
   })();
 
+  // Initialize the form once per completion request, but wait for `task` to
+  // resolve (useLiveQuery is async) so we don't seed finishedMin with 0.
+  const seededRef = useRef<string | null>(null);
   useEffect(() => {
-    if (completingTaskId) {
-      setNote('');
-      setFinishedMin(String(trackedMin));
-      setTimeout(() => inputRef.current?.focus(), 0);
+    if (!completingTaskId) {
+      seededRef.current = null;
+      return;
     }
-    // Intentionally not depending on trackedMin — we want the default frozen
-    // at the moment the popup opens so the user's edits aren't clobbered.
+    if (seededRef.current === completingTaskId) return;
+    if (!task) return;
+    seededRef.current = completingTaskId;
+    setNote('');
+    setFinishedMin(String(trackedMin));
+    setTimeout(() => inputRef.current?.focus(), 0);
+    // Re-run when task resolves so trackedMin is accurate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completingTaskId]);
+  }, [completingTaskId, task]);
 
   if (!completingTaskId) return null;
 
@@ -61,7 +68,6 @@ export function CompletionPrompt() {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(28, 24, 20, 0.35)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) clearCompletion(); }}
     >
       <form
         onSubmit={(e) => { e.preventDefault(); void finish(true); }}
@@ -86,21 +92,29 @@ export function CompletionPrompt() {
           </h2>
         </div>
 
-        <div className="row items-end" style={{ gap: 24, flexWrap: 'wrap' }}>
+        <div className="row items-end" style={{ gap: 32, flexWrap: 'wrap' }}>
           <div className="col" style={{ gap: 4 }}>
             <span className="tiny">estimated time</span>
-            <span
-              className="hand num"
-              style={{ fontSize: 22, lineHeight: 1, color: 'var(--ink)' }}
-            >
-              {task?.est_minutes ?? 0}m
-            </span>
+            <div className="row items-baseline" style={{ gap: 4, height: 40 }}>
+              <span
+                className="hand num"
+                style={{ fontSize: 22, lineHeight: 1, color: 'var(--ink)' }}
+              >
+                {task?.est_minutes ?? 0}
+              </span>
+              <span
+                className="hand num"
+                style={{ fontSize: 22, lineHeight: 1, color: 'var(--ink-faint)' }}
+              >
+                m
+              </span>
+            </div>
           </div>
           <div className="col" style={{ gap: 4 }}>
             <label className="tiny" htmlFor="completion-finished-in">
               finished in
             </label>
-            <div className="row items-baseline" style={{ gap: 4 }}>
+            <div className="row items-baseline" style={{ gap: 4, height: 40 }}>
               <input
                 id="completion-finished-in"
                 type="number"
@@ -134,14 +148,6 @@ export function CompletionPrompt() {
                 m
               </span>
             </div>
-            <span
-              className="tiny"
-              style={{ color: 'var(--ink-faint)' }}
-            >
-              {trackedMin > 0
-                ? `timer logged ${trackedMin}m — edit if it's wrong`
-                : 'forgot the timer? type your spent minutes here'}
-            </span>
           </div>
         </div>
 

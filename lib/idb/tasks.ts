@@ -2,7 +2,7 @@
 
 import { getDb, type Task } from './db';
 import { enqueue } from './queue';
-import { applyTaskToDeficit } from '@/lib/compute/deficit';
+import { applyTaskToDeficit, reverseTaskFromDeficit } from '@/lib/compute/deficit';
 
 function now() { return Date.now(); }
 function newId() { return crypto.randomUUID(); }
@@ -117,23 +117,26 @@ export async function completeTask(
     completion_note: note,
   });
 
-  // Update cumulative deficit
-  const settings = await db.settings.toCollection().first();
-  if (settings) {
-    const { newDeficit } = applyTaskToDeficit(
-      task.est_minutes,
-      actualMs,
-      settings.deficit_seconds,
-    );
-    await db.settings.update(settings.user_id, {
-      deficit_seconds: newDeficit,
-      updated_at: ts,
-    });
-    enqueue('upsert', 'settings', settings.user_id, {
-      user_id: settings.user_id,
-      deficit_seconds: newDeficit,
-      updated_at: new Date(ts).toISOString(),
-    });
+  // Update cumulative deficit. Habits do NOT count — recurring routines
+  // shouldn't move the deficit needle.
+  if (task.template_id == null) {
+    const settings = await db.settings.toCollection().first();
+    if (settings) {
+      const { newDeficit } = applyTaskToDeficit(
+        task.est_minutes,
+        actualMs,
+        settings.deficit_seconds,
+      );
+      await db.settings.update(settings.user_id, {
+        deficit_seconds: newDeficit,
+        updated_at: ts,
+      });
+      enqueue('upsert', 'settings', settings.user_id, {
+        user_id: settings.user_id,
+        deficit_seconds: newDeficit,
+        updated_at: new Date(ts).toISOString(),
+      });
+    }
   }
 }
 
@@ -150,17 +153,17 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     elapsed_ms: 0,
   });
 
-  // Reverse the deficit change. We can't perfectly reverse (the floor-at-0 is lossy)
-  // but doing best-effort keeps the tally close.
-  if (task.actual_ms != null) {
+  // Reverse the deficit change. Mirror applyTaskToDeficit exactly so that
+  // check / uncheck / recheck balances to zero (modulo the floor-at-0 clamp).
+  // Habits never moved the deficit on complete, so skip them here too.
+  if (task.actual_ms != null && task.template_id == null) {
     const settings = await db.settings.toCollection().first();
     if (settings) {
-      const estSec = task.est_minutes * 60;
-      const actualSec = task.actual_ms / 1000;
-      const delta = actualSec > estSec
-        ? -Math.ceil((actualSec - estSec) / 60) * 60
-        : 300;
-      const newDeficit = Math.max(0, settings.deficit_seconds + delta);
+      const { newDeficit } = reverseTaskFromDeficit(
+        task.est_minutes,
+        task.actual_ms,
+        settings.deficit_seconds,
+      );
       await db.settings.update(settings.user_id, {
         deficit_seconds: newDeficit,
         updated_at: Date.now(),

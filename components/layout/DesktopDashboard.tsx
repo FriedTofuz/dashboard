@@ -20,6 +20,7 @@ import { TimerProvider } from '@/components/timer/TimerProvider';
 import { BootProvider } from '@/components/system/BootProvider';
 import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
+import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
@@ -32,6 +33,7 @@ import { useEnsureHabitInstances } from '@/lib/hooks/useEnsureHabitInstances';
 import { useFlowerState } from '@/lib/hooks/useFlowerState';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { getDb } from '@/lib/idb/db';
+import { todayKey } from '@/lib/time/dayKey';
 
 interface DesktopDashboardProps {
   userId: string;
@@ -45,7 +47,10 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
 
   const settings = useLiveQuery(() => getDb().settings.get(userId), [userId]);
   const deficitSeconds = settings?.deficit_seconds ?? 0;
-  const flowerState = useFlowerState(currentDayKey, deficitSeconds);
+  // Sunflower is locked to TODAY — its state and quote shouldn't shift when
+  // the user is browsing a past or future day.
+  const today = todayKey();
+  const flowerState = useFlowerState(today, deficitSeconds);
 
   return (
     <div className="min-h-screen col">
@@ -93,7 +98,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
               </div>
 
               <div className="col" style={{ gap: 28, width: 480 }}>
-                <FlowerCard state={flowerState} dayKey={currentDayKey} userId={userId} />
+                <FlowerCard state={flowerState} dayKey={today} userId={userId} />
                 <StatsActionRow />
                 <StatsCard
                   userId={userId}
@@ -123,6 +128,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <MoveTaskDialog />
       <ConfirmDialog />
       <CommandPalette userId={userId} />
+      <TaskSearchModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

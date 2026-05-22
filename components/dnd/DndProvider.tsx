@@ -11,10 +11,8 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
-  type Modifier,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { getEventCoordinates } from '@dnd-kit/utilities';
 import { getDb } from '@/lib/idb/db';
 import { setR3Slot, moveTaskToDay, reorderTask } from '@/lib/idb/tasks';
 import type { Task } from '@/lib/idb/db';
@@ -45,26 +43,11 @@ function parseDropId(id: string): DropTarget {
   return { kind: 'unknown' };
 }
 
-/** Shift the drag-overlay so the pointer ends up at the center of the card.
- *  Without this, the overlay keeps the same cursor↔card offset as the
- *  grab point, which is jarring for large R3 cards. */
-const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
-  if (!activatorEvent || !draggingNodeRect) return transform;
-  const coords = getEventCoordinates(activatorEvent);
-  if (!coords) return transform;
-
-  const offsetX = coords.x - draggingNodeRect.left;
-  const offsetY = coords.y - draggingNodeRect.top;
-
-  return {
-    ...transform,
-    x: transform.x + offsetX - draggingNodeRect.width / 2,
-    y: transform.y + offsetY - draggingNodeRect.height / 2,
-  };
-};
-
 export function DndProvider({ children }: DndProviderProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  // Captured at drag-start so the preview can match the original element's
+  // width — without this, the cursor would float off a too-narrow preview.
+  const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -78,11 +61,15 @@ export function DndProvider({ children }: DndProviderProps) {
       const taskId = id.slice(5);
       const task = await getDb().tasks.get(taskId);
       setActiveTask(task ?? null);
+      const rect = e.active.rect.current.initial;
+      if (rect) setActiveRect({ width: rect.width, height: rect.height });
+      else setActiveRect(null);
     }
   }
 
   async function onDragEnd(e: DragEndEvent) {
     setActiveTask(null);
+    setActiveRect(null);
     const { active, over } = e;
     if (!over) return;
 
@@ -147,21 +134,21 @@ export function DndProvider({ children }: DndProviderProps) {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       {children}
       <DragOverlay
-        modifiers={[snapCenterToCursor]}
         dropAnimation={{
           duration: 180,
           easing: 'cubic-bezier(0.2, 0.7, 0.4, 1)',
         }}
       >
-        {activeTask && <DragPreview task={activeTask} />}
+        {activeTask && <DragPreview task={activeTask} rect={activeRect} />}
       </DragOverlay>
     </DndContext>
   );
 }
 
-/** Preview rendered under the cursor. R3 tasks get a card-shaped preview so
- *  the user can see what they're dragging; everything else gets a slim pill. */
-function DragPreview({ task }: { task: Task }) {
+/** Preview rendered under the cursor. Sized to match the original element's
+ *  bounding rect so the cursor stays at the same point relative to the
+ *  preview as it did on the source row. */
+function DragPreview({ task, rect }: { task: Task; rect: { width: number; height: number } | null }) {
   const isR3 = task.r3_slot != null;
 
   if (isR3) {
@@ -169,8 +156,8 @@ function DragPreview({ task }: { task: Task }) {
       <div
         className="paper wobble col"
         style={{
-          width: 260,
-          minHeight: 132,
+          width: rect?.width ?? 260,
+          minHeight: rect?.height ?? 132,
           padding: '16px 18px 14px',
           background: 'var(--sage-wash)',
           border: '1.6px solid var(--ink)',
@@ -205,9 +192,12 @@ function DragPreview({ task }: { task: Task }) {
         transform: 'rotate(-1.5deg)',
         cursor: 'grabbing',
         whiteSpace: 'nowrap',
-        maxWidth: 320,
+        width: rect?.width,
+        minHeight: rect?.height,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        display: 'flex',
+        alignItems: 'center',
       }}
     >
       <span className="hand" style={{ fontSize: 18, color: 'var(--ink)' }}>

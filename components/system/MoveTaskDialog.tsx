@@ -32,10 +32,10 @@ export function MoveTaskDialog() {
   const { monthDay: fromLabel } = formatDayLabel(options.fromDayKey);
 
   const choices: DayChoice[] = [
-    { label: 'today',          dayKey: todayKey },
-    { label: 'tomorrow',       dayKey: addDays(todayKey, 1) },
-    { label: 'this/next fri',  dayKey: nextWeekday(todayKey, 5) },
-    { label: 'next monday',    dayKey: nextWeekday(todayKey, 1) },
+    { label: 'yesterday', dayKey: addDays(todayKey, -1) },
+    { label: 'today',     dayKey: todayKey },
+    { label: 'tomorrow',  dayKey: addDays(todayKey, 1) },
+    { label: 'friday',    dayKey: nextWeekday(todayKey, 5) },
   ];
 
   async function pick(choice: DayChoice) {
