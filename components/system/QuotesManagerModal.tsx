@@ -5,13 +5,14 @@ import { useUiStore } from '@/lib/store/useUiStore';
 import { useQuotes } from '@/lib/quotes';
 import { cn } from '@/lib/utils';
 
+interface QuotesBodyProps {
+  /** Optional close handler — renders a "close" link in the body header. */
+  onClose?: () => void;
+}
+
 export function QuotesManagerModal() {
   const open = useUiStore((s) => s.quotesManagerOpen);
   const setOpen = useUiStore((s) => s.setQuotesManagerOpen);
-  const [quotes, setQuotes] = useQuotes();
-  const [draft, setDraft] = useState('');
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingText, setEditingText] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -23,6 +24,31 @@ export function QuotesManagerModal() {
   }, [open, setOpen]);
 
   if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(28, 24, 20, 0.45)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quotes-title"
+    >
+      <div
+        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
+        style={{ maxWidth: 900 }}
+      >
+        <QuotesManagerBody onClose={() => setOpen(false)} />
+      </div>
+    </div>
+  );
+}
+
+/** Quotes editor body — reusable inside a modal or embedded in Settings. */
+export function QuotesManagerBody({ onClose }: QuotesBodyProps) {
+  const [quotes, setQuotes] = useQuotes();
+  const [draft, setDraft] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   function add() {
     const t = draft.trim();
@@ -50,32 +76,24 @@ export function QuotesManagerModal() {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(28, 24, 20, 0.45)' }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="quotes-title"
-    >
-      <div
-        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
-        style={{ maxWidth: 900 }}
-      >
-        <div className="row items-center justify-between">
-          <h2 id="quotes-title" className="font-hand text-h2">quotes</h2>
+    <div className="col gap-5 w-full">
+      <div className="row items-center justify-between">
+        <h2 id="quotes-title" className="font-hand text-h2">quotes</h2>
+        {onClose && (
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={onClose}
             className="tiny"
             aria-label="Close quotes manager"
           >
             close
           </button>
-        </div>
-        <p className="muted" style={{ fontSize: 13 }}>
-          one quote shows above the sunflower each day, cycling through this
-          list. add your favorites; edit by clicking a line.
-        </p>
+        )}
+      </div>
+      <p className="muted" style={{ fontSize: 13 }}>
+        one quote shows above the sunflower each day, cycling through this
+        list. add your favorites; edit by clicking a line.
+      </p>
 
         <div className="col" style={{ gap: 2 }}>
           {quotes.length === 0 && (
@@ -185,7 +203,6 @@ export function QuotesManagerModal() {
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }

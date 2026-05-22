@@ -18,6 +18,14 @@ interface Props {
   userId: string;
 }
 
+interface BodyProps {
+  userId: string;
+  /** Optional explicit close handler — shown as a "close" link in the
+   *  header when this body is rendered inside the legacy modal overlay.
+   *  Settings-embedded mode omits it (no header close button). */
+  onClose?: () => void;
+}
+
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** Visual order with Monday first; storage indices stay JS-standard (Sun=0). */
 const WEEK_ORDER: number[] = [1, 2, 3, 4, 5, 6, 0];
@@ -37,6 +45,26 @@ export function HabitTemplatesEditor({ userId }: Props) {
   const open = useUiStore((s) => s.habitsEditorOpen);
   const setOpen = useUiStore((s) => s.setHabitsEditorOpen);
 
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center p-6"
+      style={{ background: 'rgba(0,0,0,0.25)' }}
+      onClick={() => setOpen(false)}
+    >
+      <div
+        className="ink-box paper rounded-card p-6 max-w-2xl w-full col gap-4 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <HabitTemplatesEditorBody userId={userId} onClose={() => setOpen(false)} />
+      </div>
+    </div>
+  );
+}
+
+/** Editor body — reusable inside a modal or embedded in the Settings panel. */
+export function HabitTemplatesEditorBody({ userId, onClose }: BodyProps) {
   const habits = useLiveQuery(
     () => getDb().habit_templates.where('user_id').equals(userId).toArray(),
     [userId],
@@ -46,8 +74,6 @@ export function HabitTemplatesEditor({ userId }: Props) {
   const [editing, setEditing] = useState<HabitTemplate | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [workoutDay, setWorkoutDay] = useState(1); // Monday default
-
-  if (!open) return null;
 
   function startNew() {
     setEditing({
@@ -171,22 +197,13 @@ export function HabitTemplatesEditor({ userId }: Props) {
   const currentPlan = editing?.workout_data?.[workoutDay] ?? { title: '', exercises: [] };
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.25)' }}
-      onClick={() => {
-        setOpen(false);
-        setEditing(null);
-      }}
-    >
-      <div
-        className="ink-box paper rounded-card p-6 max-w-2xl w-full col gap-4 max-h-[85vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="row items-center justify-between">
-          <h2 className="font-hand text-h2">habits</h2>
-          <button type="button" onClick={() => setOpen(false)} className="tiny">close</button>
-        </div>
+    <div className="col gap-4 w-full">
+      <div className="row items-center justify-between">
+        <h2 className="font-hand text-h2">habits</h2>
+        {onClose && (
+          <button type="button" onClick={onClose} className="tiny">close</button>
+        )}
+      </div>
 
         {!editing && (
           <>
@@ -593,7 +610,6 @@ export function HabitTemplatesEditor({ userId }: Props) {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

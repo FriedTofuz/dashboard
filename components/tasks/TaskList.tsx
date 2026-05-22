@@ -114,14 +114,14 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
       ref={droppable.setNodeRef}
       className={cn('paper wobble transition-colors')}
       style={{
-        // "Flower pot" palette: stroke #7a4a3a, body #d9a991. Matches the
-        // sunflower's terracotta planter for visual continuity.
-        border: '1.5px solid #7a4a3a',
+        // "Flower pot" palette pulled from CSS vars so the Berkeley accent
+        // can swap terracotta → Berkeley blue without touching this file.
+        border: '1.5px solid var(--tasks-box-border)',
         borderRadius: 6,
         padding: '14px 22px',
         background: droppable.isOver
-          ? 'rgba(217, 169, 145, 0.32)'
-          : 'rgba(217, 169, 145, 0.18)',
+          ? 'var(--tasks-box-bg-active)'
+          : 'var(--tasks-box-bg)',
         position: 'relative',
         minHeight: hasContent ? undefined : 110,
       }}
@@ -134,7 +134,7 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
           bottom: 8,
           left: 0,
           width: 3,
-          background: '#d9a991',
+          background: 'var(--tasks-box-accent)',
           borderRadius: 2,
           opacity: 0.85,
         }}

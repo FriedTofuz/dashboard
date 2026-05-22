@@ -247,7 +247,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
-      <SettingsModal />
+      <SettingsModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />

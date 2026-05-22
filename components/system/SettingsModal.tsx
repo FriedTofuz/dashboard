@@ -8,6 +8,9 @@ import {
   ACCENT_PALETTES,
   type AccentPalette,
 } from '@/lib/store/useAccentStore';
+import { HabitTemplatesEditorBody } from '@/components/tasks/HabitTemplatesEditor';
+import { ManageLabelsBody } from '@/components/labels/ManageLabelsModal';
+import { QuotesManagerBody } from '@/components/system/QuotesManagerModal';
 
 type Section = 'general' | 'appearance' | 'habits' | 'labels' | 'quotes' | 'about';
 
@@ -25,10 +28,13 @@ const NAV: NavItem[] = [
   { id: 'about',       label: 'About' },
 ];
 
+interface SettingsModalProps {
+  userId: string;
+}
+
 /** Themed settings panel — sidebar + content layout (Claude Desktop shape).
- *  Surfaces appearance controls inline; deep-links to existing manager
- *  modals for the content libraries (habits / labels / quotes). */
-export function SettingsModal() {
+ *  Surfaces appearance + the habits / labels / quotes editors inline. */
+export function SettingsModal({ userId }: SettingsModalProps) {
   const open = useUiStore((s) => s.settingsOpen);
   const close = () => useUiStore.getState().setSettingsOpen(false);
   const [section, setSection] = useState<Section>('general');
@@ -49,8 +55,9 @@ export function SettingsModal() {
         style={{
           border: '1.5px solid var(--ink-soft)',
           borderRadius: 8,
-          width: 'min(880px, 92vw)',
-          height: 'min(560px, 86vh)',
+          // ~1.25× bump over the original 880×560 footprint.
+          width: 'min(1100px, 94vw)',
+          height: 'min(700px, 90vh)',
           background: 'var(--paper)',
           boxShadow: 'var(--shadow)',
           overflow: 'hidden',
@@ -60,10 +67,10 @@ export function SettingsModal() {
         <aside
           className="col"
           style={{
-            width: 200,
+            width: 220,
             borderRight: '1.5px solid var(--rule)',
             background: 'var(--paper-warm)',
-            padding: '20px 12px',
+            padding: '24px 14px',
             gap: 4,
           }}
         >
@@ -142,24 +149,9 @@ export function SettingsModal() {
 
           {section === 'general'    && <GeneralPanel onClose={close} />}
           {section === 'appearance' && <AppearancePanel />}
-          {section === 'habits'     && <DeepLinkPanel
-            title="Habits"
-            description="Manage the daily habit templates that auto-create each morning."
-            buttonLabel="Open habits editor"
-            onClick={() => { close(); useUiStore.getState().setHabitsEditorOpen(true); }}
-          />}
-          {section === 'labels'     && <DeepLinkPanel
-            title="Labels"
-            description="Create, rename, and reorder labels. Labels can be assigned to tasks from the search modal or the task editor."
-            buttonLabel="Open labels manager"
-            onClick={() => { close(); useUiStore.getState().setLabelsManagerOpen(true); }}
-          />}
-          {section === 'quotes'     && <DeepLinkPanel
-            title="Quotes"
-            description="Add quotes that rotate on the Sunflower card each day."
-            buttonLabel="Open quotes manager"
-            onClick={() => { close(); useUiStore.getState().setQuotesManagerOpen(true); }}
-          />}
+          {section === 'habits'     && <HabitTemplatesEditorBody userId={userId} />}
+          {section === 'labels'     && <ManageLabelsBody userId={userId} />}
+          {section === 'quotes'     && <QuotesManagerBody />}
           {section === 'about'      && <AboutPanel />}
         </section>
       </div>
@@ -343,38 +335,6 @@ function AppearancePanel() {
             },
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Panel: deep-link card ──────────────────────────────────────────────
-
-interface DeepLinkPanelProps {
-  title: string;
-  description: string;
-  buttonLabel: string;
-  onClick: () => void;
-}
-
-function DeepLinkPanel({ title, description, buttonLabel, onClick }: DeepLinkPanelProps) {
-  return (
-    <div className="col" style={{ gap: 16 }}>
-      <PanelHeading title={title} />
-      <p
-        className="ui"
-        style={{
-          fontSize: 13,
-          lineHeight: 1.5,
-          color: 'var(--ink-soft)',
-          margin: 0,
-          maxWidth: 480,
-        }}
-      >
-        {description}
-      </p>
-      <div>
-        <SettingButton onClick={onClick}>{buttonLabel}</SettingButton>
       </div>
     </div>
   );

@@ -17,10 +17,35 @@ interface Props {
   userId: string;
 }
 
+interface BodyProps {
+  userId: string;
+  /** Optional close handler — renders a "close" link in the body header. */
+  onClose?: () => void;
+}
+
 export function ManageLabelsModal({ userId }: Props) {
   const open = useUiStore((s) => s.labelsManagerOpen);
   const setOpen = useUiStore((s) => s.setLabelsManagerOpen);
 
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center p-6"
+      style={{ background: 'rgba(0,0,0,0.25)', zIndex: 60 }}
+    >
+      <div
+        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
+        style={{ maxWidth: 704, minHeight: 'min(75vh, 640px)' }}
+      >
+        <ManageLabelsBody userId={userId} onClose={() => setOpen(false)} />
+      </div>
+    </div>
+  );
+}
+
+/** Manage-labels body — reusable inside a modal or embedded in Settings. */
+export function ManageLabelsBody({ userId, onClose }: BodyProps) {
   const labels = useLiveQuery(
     () => getDb().labels.where('user_id').equals(userId).sortBy('sort_order'),
     [userId],
@@ -31,8 +56,6 @@ export function ManageLabelsModal({ userId }: Props) {
   const [draftColor, setDraftColor] = useState(LABEL_COLOR_PRESETS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-
-  if (!open) return null;
 
   async function add() {
     const name = draftName.trim();
@@ -68,22 +91,17 @@ export function ManageLabelsModal({ userId }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.25)', zIndex: 60 }}
-    >
-      <div
-        className="ink-box-soft paper rounded-card p-8 w-full col gap-5 max-h-[95vh] overflow-y-auto"
-        style={{ maxWidth: 704, minHeight: 'min(75vh, 640px)' }}
-      >
-        <div className="row items-center justify-between">
-          <h2 className="font-hand text-h2">labels</h2>
-          <button type="button" onClick={() => setOpen(false)} className="tiny">close</button>
-        </div>
+    <div className="col gap-5 w-full">
+      <div className="row items-center justify-between">
+        <h2 className="font-hand text-h2">labels</h2>
+        {onClose && (
+          <button type="button" onClick={onClose} className="tiny">close</button>
+        )}
+      </div>
 
-        <p className="muted" style={{ fontSize: 13 }}>
-          tag tasks for cross-cutting context — show up as chips, filterable in archive and search.
-        </p>
+      <p className="muted" style={{ fontSize: 13 }}>
+        tag tasks for cross-cutting context — show up as chips, filterable in archive and search.
+      </p>
 
         {/* Existing labels */}
         <div className="col" style={{ gap: 6 }}>
@@ -196,7 +214,6 @@ export function ManageLabelsModal({ userId }: Props) {
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }
