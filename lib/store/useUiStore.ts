@@ -73,6 +73,10 @@ interface UiState {
   taskSearchOpen: boolean;
   setTaskSearchOpen: (open: boolean) => void;
 
+  /** Settings modal — opened from the bottom-right action row button. */
+  settingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
+
   syncStatus: 'idle' | 'syncing' | 'error';
   setSyncStatus: (s: 'idle' | 'syncing' | 'error') => void;
 
@@ -125,6 +129,9 @@ export const useUiStore = create<UiState>()((set) => ({
 
   taskSearchOpen: false,
   setTaskSearchOpen: (open) => set({ taskSearchOpen: open }),
+
+  settingsOpen: false,
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
 
   syncStatus: 'idle',
   setSyncStatus: (s) => set({ syncStatus: s }),

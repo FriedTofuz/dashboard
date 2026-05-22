@@ -15,7 +15,7 @@ import {
   createTask,
   updateTask,
 } from '@/lib/idb/tasks';
-import { elapsedLabel, addDays, formatDayLabel } from '@/lib/time/dayKey';
+import { elapsedLabel, addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
@@ -306,20 +306,27 @@ interface R3SlotMenuProps {
 
 function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
   const [open, setOpen] = useState(false);
+  const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const openEditor = useUiStore((s) => s.openEditor);
+  const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setShowMoveSubmenu(false);
+      }
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
+  function close() { setOpen(false); setShowMoveSubmenu(false); }
+
   async function handleDelete() {
-    setOpen(false);
+    close();
     const ok = await themedConfirm({
       title: `delete "${task.title}"?`,
       body: 'this can\'t be undone.',
@@ -359,18 +366,35 @@ function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
     });
   }
 
-  async function handlePushTomorrow() {
-    setOpen(false);
-    const target = addDays(dayKey, 1);
-    await moveTaskToDay(task.id, target);
-    const { monthDay } = formatDayLabel(target);
-    toast(`pushed to ${monthDay}`, {
-      action: {
-        label: 'undo',
-        onAction: () => { void moveTaskToDay(task.id, dayKey); },
-      },
+  async function handleMoveTo(targetKey: string) {
+    close();
+    const fromDayKey = task.day_key;
+    await moveTaskToDay(task.id, targetKey);
+    const { monthDay } = formatDayLabel(targetKey);
+    toast(`moved to ${monthDay}`, {
+      action: fromDayKey
+        ? {
+            label: 'undo',
+            onAction: () => { void moveTaskToDay(task.id, fromDayKey); },
+          }
+        : undefined,
     });
   }
+
+  // Mirror the regular task menu: absolute destinations relative to actual
+  // today, minus the day being viewed and the task's own day, with the
+  // friday/tomorrow dedupe applied.
+  const todayK = todayKey();
+  const tomorrowK = addDays(todayK, 1);
+  const fridayK = nextWeekday(todayK, 5);
+  const moveOptions = task.day_key
+    ? [
+        { label: 'yesterday', key: addDays(todayK, -1) },
+        { label: 'today',     key: todayK },
+        { label: 'tomorrow',  key: tomorrowK },
+        ...(fridayK === tomorrowK ? [] : [{ label: 'friday', key: fridayK }]),
+      ].filter((opt) => opt.key !== currentDayKey && opt.key !== task.day_key)
+    : [];
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -417,20 +441,49 @@ function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
             fontSize: 13,
           }}
         >
-          <SlotMenuItem onClick={() => { setOpen(false); openEditor(task.id); }}>
+          <SlotMenuItem onClick={() => { close(); openEditor(task.id); }}>
             edit
           </SlotMenuItem>
           <SlotMenuItem
             onClick={() => {
-              setOpen(false);
+              close();
               void duplicateTask(task.id).then(() => toastSuccess('duplicated'));
             }}
           >
             duplicate
           </SlotMenuItem>
-          <SlotMenuItem onClick={handlePushTomorrow}>
-            push to tomorrow
+          <SlotMenuItem
+            onClick={() => setShowMoveSubmenu((v) => !v)}
+          >
+            move to day ▸
           </SlotMenuItem>
+          {showMoveSubmenu && (
+            <div style={{ borderTop: '1px solid var(--rule)', marginTop: 2, paddingTop: 2 }}>
+              {moveOptions.length === 0 ? (
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    color: 'var(--ink-faint)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  nowhere to move
+                </div>
+              ) : (
+                moveOptions.map((opt) => (
+                  <SlotMenuItem key={opt.key} onClick={() => void handleMoveTo(opt.key)}>
+                    <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <span>{opt.label}</span>
+                      <span className="num" style={{ color: 'var(--ink-faint)', fontSize: 11 }}>
+                        {opt.key.slice(5)}
+                      </span>
+                    </span>
+                  </SlotMenuItem>
+                ))
+              )}
+            </div>
+          )}
           <div style={{ height: 1, background: 'var(--rule)', margin: '4px 0' }} />
           <SlotMenuItem danger onClick={handleDelete}>
             delete

@@ -28,6 +28,7 @@ export function StatsActionRow({
   const router = useRouter();
   const setScratchOpen = useUiStore((s) => s.setScratchOpen);
   const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   const day = useLiveQuery(
@@ -91,7 +92,11 @@ export function StatsActionRow({
         />
         <ActionButton placeholder />
         <ActionButton placeholder />
-        <ActionButton placeholder />
+        <ActionButton
+          label="Settings"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Open settings"
+        />
       </div>
     </div>
   );

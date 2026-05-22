@@ -21,12 +21,14 @@ export function CompletionPrompt() {
   const [finishedMin, setFinishedMin] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Tracked minutes from the timer (rounded), used as the default for
-  // "Finished In". Computed live so a running task shows the correct value.
+  // Default "Finished In" — tracked minutes from the timer if any, else the
+  // task's estimate. We fall back to the estimate so users who never touched
+  // the timer don't record 0m (which would distort the time deficit).
   const trackedMin = (() => {
     if (!task) return 0;
     const trackedMs =
       task.elapsed_ms + (task.started_at ? Date.now() - task.started_at : 0);
+    if (trackedMs <= 0) return task.est_minutes ?? 0;
     return Math.max(0, Math.round(trackedMs / 60000));
   })();
 

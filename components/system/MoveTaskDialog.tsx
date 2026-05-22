@@ -31,13 +31,28 @@ export function MoveTaskDialog() {
 
   const { monthDay: fromLabel } = formatDayLabel(options.fromDayKey);
   const todayK = todayKey();
+  const tomorrowKey = addDays(todayK, 1);
+  const fridayKey = nextWeekday(todayK, 5);
 
-  const choices: DayChoice[] = [
+  const raw: DayChoice[] = [
     { label: 'yesterday', dayKey: addDays(todayK, -1) },
     { label: 'today',     dayKey: todayK },
-    { label: 'tomorrow',  dayKey: addDays(todayK, 1) },
-    { label: 'friday',    dayKey: nextWeekday(todayK, 5) },
-  ].filter((c) => c.dayKey !== currentDayKey && c.dayKey !== options.fromDayKey);
+    { label: 'tomorrow',  dayKey: tomorrowKey },
+    // Drop "friday" when it would land on the same day as "tomorrow" — keeps
+    // the list tight and avoids two buttons that do the same thing.
+    ...(fridayKey === tomorrowKey ? [] : [{ label: 'friday', dayKey: fridayKey }]),
+  ];
+
+  // For a normal (non-carryover) menu, fromDayKey === currentDayKey, so
+  // filtering both is fine. For a carryover row, the task lives on a
+  // previous day (fromDayKey) and is surfaced on currentDayKey — keep
+  // currentDayKey as a valid destination so "today" works.
+  const isCarryover = options.fromDayKey !== currentDayKey;
+  const choices: DayChoice[] = raw.filter((c) => {
+    if (c.dayKey === options.fromDayKey) return false;
+    if (!isCarryover && c.dayKey === currentDayKey) return false;
+    return true;
+  });
 
   async function pick(choice: DayChoice) {
     if (!options) return;
