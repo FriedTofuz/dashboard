@@ -508,14 +508,18 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
   // Destinations are absolute (real yesterday / today / tomorrow / friday),
   // not relative to the task's current day — "move to tomorrow" always means
   // actual tomorrow. Hide options whose destination matches the day the user
-  // is viewing or the task's current day (those would be no-ops).
+  // is viewing or the task's current day (those would be no-ops). Also drop
+  // "friday" when it equals "tomorrow" so the menu doesn't show two buttons
+  // for the same date (Thursday → Friday).
   const todayK = todayKey();
+  const tomorrowK = addDays(todayK, 1);
+  const fridayK = nextWeekday(todayK, 5);
   const moveOptions = task.day_key
     ? [
         { label: 'yesterday', key: addDays(todayK, -1) },
         { label: 'today',     key: todayK },
-        { label: 'tomorrow',  key: addDays(todayK, 1) },
-        { label: 'friday',    key: nextWeekday(todayK, 5) },
+        { label: 'tomorrow',  key: tomorrowK },
+        ...(fridayK === tomorrowK ? [] : [{ label: 'friday', key: fridayK }]),
       ].filter((opt) => opt.key !== currentDayKey && opt.key !== task.day_key)
     : [];
 

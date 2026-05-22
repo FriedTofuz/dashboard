@@ -21,6 +21,7 @@ import { BootProvider } from '@/components/system/BootProvider';
 import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
+import { SettingsModal } from '@/components/system/SettingsModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
@@ -56,7 +57,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
     <div className="min-h-screen col">
       <BootProvider userId={userId} />
       <TimerProvider />
-      <ShortcutsListener />
+      <ShortcutsListener userId={userId} />
 
       <DndProvider>
         <main
@@ -129,6 +130,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
+      <SettingsModal />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

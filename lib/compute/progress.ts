@@ -82,15 +82,25 @@ export function progressForDay(tasks: TaskForProgress[]): ProgressResult {
   );
   const otherPts = othTotalW === 0 ? 0 : (othDoneW / othTotalW) * 25;
 
-  // Cap = points reachable today — empty categories leave their slice unreachable
-  const cap =
+  // Renormalize against only the categories that exist today — empty habits
+  // or empty "others" shouldn't make 100% unreachable. R3 is always part of
+  // the denominator (its empty-slot weighting already enforces the rule that
+  // <3 R3 tasks done can never hit 100%).
+  const totalAvailable =
     50 +
     (habits.length > 0 ? 25 : 0) +
     (others.length > 0 ? 25 : 0);
+  const rawPoints = r3Pts + habitPts + otherPts;
+  const value = totalAvailable === 0
+    ? 0
+    : Math.round((rawPoints / totalAvailable) * 100);
 
   return {
-    value: Math.round(r3Pts + habitPts + otherPts),
-    cap,
+    value,
+    // `cap` is preserved for downstream callers — after renormalization it's
+    // always 100 (max reachable is the full bar), since dropping empty
+    // categories from the denominator removes their unreachable slice.
+    cap: 100,
     r3Pts,
     habitPts,
     otherPts,

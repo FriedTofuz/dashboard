@@ -23,6 +23,7 @@ import { BootProvider } from '@/components/system/BootProvider';
 import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
+import { SettingsModal } from '@/components/system/SettingsModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
@@ -70,7 +71,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
     <div className="min-h-screen col">
       <BootProvider userId={userId} />
       <TimerProvider />
-      <ShortcutsListener />
+      <ShortcutsListener userId={userId} />
 
       <DndProvider>
         <main
@@ -246,6 +247,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <ConfirmDialog />
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
+      <SettingsModal />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />

@@ -4,7 +4,14 @@ import { useEffect } from 'react';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { useTimerStore } from '@/lib/store/useTimerStore';
 import { pauseTimer } from '@/lib/idb/tasks';
-import { addDays, nextWeekday, todayKey } from '@/lib/time/dayKey';
+import { toggleDayLogged } from '@/lib/idb/days';
+import { toast } from '@/lib/store/useToastStore';
+import { addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
+
+interface ShortcutsListenerProps {
+  /** Required for L → toggle log day. */
+  userId?: string;
+}
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false;
@@ -12,8 +19,8 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || t.isContentEditable;
 }
 
-/** Global keyboard shortcuts: n, t, space, /, ⌘K, esc. */
-export function ShortcutsListener() {
+/** Global keyboard shortcuts: n, t, l, f, s, space, /, ⌘K, esc, arrows. */
+export function ShortcutsListener({ userId }: ShortcutsListenerProps = {}) {
   const openEditor = useUiStore((s) => s.openEditor);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
@@ -23,6 +30,7 @@ export function ShortcutsListener() {
   const setQuotesManagerOpen = useUiStore((s) => s.setQuotesManagerOpen);
   const setNotepadArchiveOpen = useUiStore((s) => s.setNotepadArchiveOpen);
   const setScratchOpen = useUiStore((s) => s.setScratchOpen);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const clearCompletion = useUiStore((s) => s.clearCompletion);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
   const setView = useUiStore((s) => s.setView);
@@ -60,6 +68,16 @@ export function ShortcutsListener() {
         setTaskSearchOpen(true);
         return;
       }
+      if (e.key === 'l' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        if (!userId) return;
+        const dayKey = useUiStore.getState().currentDayKey;
+        void toggleDayLogged(userId, dayKey).then((nowLogged) => {
+          const { monthDay } = formatDayLabel(dayKey);
+          toast(nowLogged ? `logged ${monthDay}` : `unlogged ${monthDay}`);
+        });
+        return;
+      }
       if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         const cur = useUiStore.getState().currentDayKey;
@@ -91,6 +109,7 @@ export function ShortcutsListener() {
         setNotepadArchiveOpen(false);
         setScratchOpen(false);
         setTaskSearchOpen(false);
+        setSettingsOpen(false);
         clearCompletion();
         return;
       }
@@ -117,9 +136,11 @@ export function ShortcutsListener() {
     setQuotesManagerOpen,
     setNotepadArchiveOpen,
     setScratchOpen,
+    setSettingsOpen,
     clearCompletion,
     setCurrentDayKey,
     setView,
+    userId,
   ]);
 
   return null;

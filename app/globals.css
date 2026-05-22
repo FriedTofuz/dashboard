@@ -45,6 +45,44 @@
 }
 
 /* ============================================================
+   Accent palettes — Berkeley Blue & Gold (light mode)
+   Gold takes the sage (R3) slot, Berkeley Blue takes the terra (task) slot.
+   Base hexes (FDB515 + 002676) are nudged toward the warm paper palette
+   so they read like ink on paper instead of vector neon.
+   ============================================================ */
+:root[data-accent="berkeley"] {
+  /* sage → gold */
+  --sage:               #D9930A;
+  --sage-deep:          #A36F08;
+  --sage-wash:          #F4D88A;
+  --sage-tint:          rgba(217, 147, 10, 0.18);
+
+  /* terracotta → Berkeley blue */
+  --terracotta:         #2E4A8E;
+  --terra:              #2E4A8E;
+  --terracotta-deep:    #002676;
+  --terra-deep:         #002676;
+  --terracotta-wash:    #BFCBE0;
+  --terra-wash:         #BFCBE0;
+  --terra-tint:         rgba(0, 38, 118, 0.18);
+}
+
+[data-theme="dark"][data-accent="berkeley"] {
+  --sage:               #F0BC4F;
+  --sage-deep:          #FBD17A;
+  --sage-wash:          rgba(240, 188, 79, 0.18);
+  --sage-tint:          rgba(240, 188, 79, 0.10);
+
+  --terracotta:         #7E96CB;
+  --terra:              #7E96CB;
+  --terracotta-deep:    #AEC0EA;
+  --terra-deep:         #AEC0EA;
+  --terracotta-wash:    rgba(126, 150, 203, 0.18);
+  --terra-wash:         rgba(126, 150, 203, 0.18);
+  --terra-tint:         rgba(126, 150, 203, 0.10);
+}
+
+/* ============================================================
    Dark mode tokens — see design/INSTRUCTIONS-V2.md §6
    ============================================================ */
 [data-theme="dark"] {
