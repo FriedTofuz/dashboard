@@ -99,7 +99,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
 
               <div className="col" style={{ gap: 28, width: 480 }}>
                 <FlowerCard state={flowerState} dayKey={today} userId={userId} />
-                <StatsActionRow />
+                <StatsActionRow userId={userId} />
                 <StatsCard
                   userId={userId}
                   dayKey={today}

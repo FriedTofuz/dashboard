@@ -20,16 +20,32 @@ export async function createHabit(
 }
 
 export async function updateHabit(id: string, changes: Partial<HabitTemplate>): Promise<void> {
-  await getDb().habit_templates.update(id, changes);
-  const updated = await getDb().habit_templates.get(id);
+  const db = getDb();
+  await db.habit_templates.update(id, changes);
+  const updated = await db.habit_templates.get(id);
   if (updated) enqueue('upsert', 'habit_templates', id, habitToRemote(updated));
+
+  // Sweep all NON-DONE instances of this habit so they regenerate fresh on
+  // the next ensureHabitInstances pass with the updated template values
+  // (title, est, recurrence, etc.). Done instances stay (they're history).
+  if (!updated) return;
+  const stale = await db.tasks
+    .where('template_id')
+    .equals(id)
+    .filter((t) => t.state !== 'done')
+    .toArray();
+  for (const inst of stale) {
+    await db.tasks.delete(inst.id);
+    enqueue('delete', 'tasks', inst.id, null);
+  }
 }
 
 export async function deleteHabit(id: string): Promise<void> {
   const db = getDb();
   // Cascade: kill any non-done instances pointing at this template (today,
-  // future, and abandoned past instances). Done instances stay so history /
-  // stats are preserved.
+  // future, abandoned past). Done instances are PRESERVED so they keep
+  // appearing in the habit section (their habit_title snapshot identifies
+  // them even after template_id is detached below).
   const orphanInstances = await db.tasks
     .where('template_id')
     .equals(id)
@@ -39,8 +55,9 @@ export async function deleteHabit(id: string): Promise<void> {
     await db.tasks.delete(inst.id);
     enqueue('delete', 'tasks', inst.id, null);
   }
-  // Also clear template_id on done instances so they survive the template
-  // delete on other devices (which would otherwise FK-cascade them away).
+  // Detach template_id on done instances FIRST so the server-side FK
+  // (on delete cascade) can't sweep them when we delete the template.
+  // habit_title remains so they still render in the habit section.
   const doneInstances = await db.tasks
     .where('template_id')
     .equals(id)
@@ -48,7 +65,15 @@ export async function deleteHabit(id: string): Promise<void> {
     .toArray();
   for (const inst of doneInstances) {
     const ts = Date.now();
-    await db.tasks.update(inst.id, { template_id: null, updated_at: ts });
+    // Backfill habit_title from the task title if the row predates the
+    // habit_title column — otherwise it would land in the regular task
+    // list after detachment.
+    const title = inst.habit_title ?? inst.title;
+    await db.tasks.update(inst.id, {
+      template_id: null,
+      habit_title: title,
+      updated_at: ts,
+    });
     const updated = await db.tasks.get(inst.id);
     if (updated) enqueue('upsert', 'tasks', inst.id, taskToRemote(updated));
   }
@@ -148,6 +173,9 @@ export async function ensureHabitInstances(dayKey: string, userId: string): Prom
       skipped: false,
       archived: false,
       workout_progress: tmpl.kind === 'workout' ? {} : null,
+      // Snapshot title so the row keeps showing in the habit box if the
+      // parent template is later deleted (template_id will be detached).
+      habit_title: tmpl.title,
       created_at: ts,
       updated_at: ts,
     };
@@ -196,6 +224,7 @@ function taskToRemote(t: Task): Record<string, unknown> {
     subtasks:         t.subtasks ?? null,
     start_time:       t.start_time ?? null,
     end_time:         t.end_time ?? null,
+    habit_title:      t.habit_title ?? null,
     created_at:       new Date(t.created_at).toISOString(),
     updated_at:       new Date(t.updated_at).toISOString(),
   };

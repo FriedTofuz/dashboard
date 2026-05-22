@@ -27,11 +27,14 @@ function dayKeyToYearMonth(key: string | null | undefined): { year: number; mont
   return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
 }
 
+type StateFilter = 'done' | 'open' | 'all';
+
 export function ArchiveView({ userId }: Props) {
   const [q, setQ] = useState('');
   const [filterYear, setFilterYear] = useState<number | 'all'>('all');
   const [filterMonth, setFilterMonth] = useState<number | 'all'>('all');
   const [filterLabel, setFilterLabel] = useState<string | 'all'>('all');
+  const [filterState, setFilterState] = useState<StateFilter>('done');
   const setView = useUiStore((s) => s.setView);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
   const openEditor = useUiStore((s) => s.openEditor);
@@ -111,24 +114,33 @@ export function ArchiveView({ userId }: Props) {
       if (filterLabel === 'all') return true;
       return taskIdToLabelIds.get(t.id)?.has(filterLabel) ?? false;
     };
+    const matchesState = (t: Task) => {
+      if (filterState === 'all') return true;
+      if (filterState === 'done') return t.state === 'done';
+      return t.state !== 'done'; // 'open' = any non-done (open/running/paused)
+    };
     const list = (allTasks ?? []).filter((t) => {
-      // Hide habit instances — archive is for one-off / project work, not the
-      // daily template churn.
+      // Hide habit instances (live or detached) — archive is for one-off /
+      // project work, not the daily template churn.
       if (t.template_id != null) return false;
+      if (t.habit_title != null) return false;
       const ym = dayKeyToYearMonth(t.day_key);
       if (filterYear !== 'all' && (!ym || ym.year !== filterYear)) return false;
       if (filterMonth !== 'all' && (!ym || ym.month !== filterMonth)) return false;
       if (!labelMatch(t)) return false;
+      if (!matchesState(t)) return false;
       return true;
     });
 
-    const anyFilter = filterYear !== 'all' || filterMonth !== 'all' || filterLabel !== 'all';
+    const anyFilter =
+      filterYear !== 'all' ||
+      filterMonth !== 'all' ||
+      filterLabel !== 'all' ||
+      filterState !== 'done';
 
     if (ql.length === 0) {
-      // When no search, prioritize done tasks but include all matching the filter.
-      const filtered = list.filter((t) =>
-        anyFilter ? !t.archived : t.state === 'done',
-      );
+      // Without a search query, cap at 50 unless any filter is engaged.
+      const filtered = list.filter((t) => !t.archived);
       return filtered.slice(0, anyFilter ? 200 : 50);
     }
     return list
@@ -139,7 +151,7 @@ export function ArchiveView({ userId }: Props) {
           (t.completion_note ?? '').toLowerCase().includes(ql),
       )
       .slice(0, 200);
-  }, [allTasks, ql, filterYear, filterMonth, filterLabel, taskIdToLabelIds]);
+  }, [allTasks, ql, filterYear, filterMonth, filterLabel, filterState, taskIdToLabelIds]);
 
   const matchingPages = useMemo(
     () =>
@@ -157,7 +169,11 @@ export function ArchiveView({ userId }: Props) {
   }, [days, ql]);
 
   const noFilter =
-    ql.length === 0 && filterYear === 'all' && filterMonth === 'all' && filterLabel === 'all';
+    ql.length === 0 &&
+    filterYear === 'all' &&
+    filterMonth === 'all' &&
+    filterLabel === 'all' &&
+    filterState === 'done';
   const isEmpty =
     noFilter &&
     matchingTasks.length === 0 &&
@@ -289,6 +305,16 @@ export function ArchiveView({ userId }: Props) {
               ...(labels ?? []).map((l) => ({ value: l.id, label: l.name })),
             ]}
           />
+          <FilterDropdown
+            label="show"
+            value={filterState}
+            onChange={(v) => setFilterState(v as StateFilter)}
+            options={[
+              { value: 'done', label: 'finished' },
+              { value: 'open', label: 'unfinished' },
+              { value: 'all',  label: 'all' },
+            ]}
+          />
           <button
             type="button"
             onClick={() => setLabelsManagerOpen(true)}
@@ -305,10 +331,10 @@ export function ArchiveView({ userId }: Props) {
           >
             ⚙
           </button>
-          {(filterYear !== 'all' || filterMonth !== 'all' || filterLabel !== 'all') && (
+          {(filterYear !== 'all' || filterMonth !== 'all' || filterLabel !== 'all' || filterState !== 'done') && (
             <button
               type="button"
-              onClick={() => { setFilterYear('all'); setFilterMonth('all'); setFilterLabel('all'); }}
+              onClick={() => { setFilterYear('all'); setFilterMonth('all'); setFilterLabel('all'); setFilterState('done'); }}
               className="ui hover:bg-paper-warm transition-colors"
               style={{
                 border: 'none',

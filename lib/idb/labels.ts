@@ -63,6 +63,31 @@ export async function getLabelsForTask(taskId: string): Promise<string[]> {
   return links.map((l) => l.label_id);
 }
 
+/** Add a single label to multiple tasks (idempotent — skips already-tagged
+ *  tasks). Used by the search modal's bulk-assign flow. */
+export async function assignLabelToTasks(
+  taskIds: string[],
+  labelId: string,
+  userId: string,
+): Promise<void> {
+  const db = getDb();
+  const ts = now();
+  for (const taskId of taskIds) {
+    const linkId = `${taskId}|${labelId}`;
+    const existing = await db.task_labels.get(linkId);
+    if (existing) continue;
+    const link: TaskLabel = {
+      id: linkId,
+      task_id: taskId,
+      label_id: labelId,
+      user_id: userId,
+      created_at: ts,
+    };
+    await db.task_labels.put(link);
+    enqueue('upsert', 'task_labels', link.id, taskLabelToRemote(link));
+  }
+}
+
 export async function setTaskLabels(
   taskId: string,
   labelIds: string[],

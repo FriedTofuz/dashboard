@@ -67,7 +67,7 @@ export function TopBar() {
       <h1
         className="font-hand v2-date-display"
         style={{
-          fontSize: 32,
+          fontSize: 40,
           lineHeight: 1.1,
           fontWeight: 600,
           margin: 0,

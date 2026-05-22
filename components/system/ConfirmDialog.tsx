@@ -32,8 +32,10 @@ export function ConfirmDialog() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(28, 24, 20, 0.45)' }}
+      className="fixed inset-0 flex items-center justify-center"
+      // z-index needs to clear other modals (search z-50, labels z-60) so the
+      // confirm dialog isn't hidden when it's triggered from inside them.
+      style={{ background: 'rgba(28, 24, 20, 0.45)', zIndex: 100 }}
       onClick={(e) => { if (e.target === e.currentTarget) resolveAndClose(false); }}
       role="dialog"
       aria-modal="true"

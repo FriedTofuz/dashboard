@@ -299,6 +299,7 @@ function taskToRemote(t: Task): Record<string, unknown> {
     subtasks:         t.subtasks ?? null,
     start_time:       t.start_time ?? null,
     end_time:         t.end_time ?? null,
+    habit_title:      t.habit_title ?? null,
     created_at:       new Date(t.created_at).toISOString(),
     updated_at:       new Date(t.updated_at).toISOString(),
   };

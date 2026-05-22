@@ -124,7 +124,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
                 dayKey={today}
                 userId={userId}
               />
-              <StatsActionRow showCalendar={false} />
+              <StatsActionRow userId={userId} showCalendar={false} />
               <StatsCard
                 userId={userId}
                 dayKey={today}

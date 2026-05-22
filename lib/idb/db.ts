@@ -67,6 +67,10 @@ export interface Task {
   /** Optional time window for the task (HH:MM 24h, e.g. "09:00"). */
   start_time?: string | null;
   end_time?: string | null;
+  /** Snapshot of the originating habit template's title. Populated when the
+   *  task is materialized from a habit. Persists after the template is
+   *  deleted so the row can still be rendered in the habit section. */
+  habit_title?: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -113,6 +117,10 @@ export interface Day {
   notes: string;
   flower_state: 'thriving' | 'healthy' | 'drooping' | 'wilting';
   deficit_seconds: number;           // end-of-day snapshot
+  /** Epoch ms when the user explicitly logged this day via the Log Day
+   *  button. Only logged days count toward cumulative stats / streak.
+   *  null = unlogged (transient — stats ignore it). */
+  logged_at: number | null;
 }
 
 export interface NotepadPage {
@@ -181,6 +189,28 @@ export class SunflowerDB extends Dexie {
         // Backfill habit_templates.kind for rows created under v1.
         await tx.table('habit_templates').toCollection().modify((h) => {
           if (!h.kind) h.kind = 'habit';
+        });
+      });
+    // v3 — habit_title snapshot on tasks + logged_at on days.
+    this.version(3)
+      .stores({
+        tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+        habit_templates:'id, user_id, active, kind, [user_id+active]',
+        days:           '[user_id+day_key], user_id, day_key',
+        notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+        settings:       'user_id',
+        labels:         'id, user_id, name, [user_id+name]',
+        task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+        write_queue:    '++id, table, row_id, attempted_at',
+      })
+      .upgrade(async (tx) => {
+        // Default the new columns. Days created under v2 had no logged_at
+        // notion at all — leave them unlogged so the user explicitly opts in.
+        await tx.table('days').toCollection().modify((d) => {
+          if (d.logged_at === undefined) d.logged_at = null;
+        });
+        await tx.table('tasks').toCollection().modify((t) => {
+          if (t.habit_title === undefined) t.habit_title = null;
         });
       });
   }
