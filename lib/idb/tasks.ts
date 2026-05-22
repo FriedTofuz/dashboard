@@ -184,19 +184,38 @@ export async function setR3Slot(
 ): Promise<void> {
   const db = getDb();
   const ts = now();
+  const task = await db.tasks.get(taskId);
+  if (!task) return;
+
   await db.transaction('rw', db.tasks, async () => {
     if (slot !== null) {
+      // Evict the existing slot-holder on the TARGET day only.
+      //
+      // The previous query used `.between(['', dayKey], ['￿', dayKey])` on the
+      // [user_id+day_key] compound index, but Dexie compares compound tuples
+      // lexicographically — that range matches records across all users AND
+      // all days, so `.first()` could return (and evict) an R3 task from a
+      // completely different day. Use `.equals([userId, dayKey])` to scope
+      // properly.
       const occupant = await db.tasks
         .where('[user_id+day_key]')
-        .between(['', dayKey], ['￿', dayKey])
+        .equals([task.user_id, dayKey])
         .filter((t) => t.r3_slot === slot && t.id !== taskId)
         .first();
       if (occupant) {
         await db.tasks.update(occupant.id, { r3_slot: null, updated_at: ts });
         enqueue('upsert', 'tasks', occupant.id, taskToRemote({ ...occupant, r3_slot: null, updated_at: ts }));
       }
+      // Also move the task to the target day. Without this, dragging a task
+      // from yesterday into today's R3 leaves it on yesterday (with r3_slot
+      // set) — confusing, since it appears on the OLD day's R3 row.
+      const updates: Partial<Task> = { r3_slot: slot, updated_at: ts };
+      if (task.day_key !== dayKey) updates.day_key = dayKey;
+      await db.tasks.update(taskId, updates);
+    } else {
+      // Demoting out of R3 — preserve day_key.
+      await db.tasks.update(taskId, { r3_slot: null, updated_at: ts });
     }
-    await db.tasks.update(taskId, { r3_slot: slot, updated_at: ts });
   });
   const updated = await db.tasks.get(taskId);
   if (updated) enqueue('upsert', 'tasks', taskId, taskToRemote(updated));
