@@ -16,6 +16,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
 export function ShortcutsListener() {
   const openEditor = useUiStore((s) => s.openEditor);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
+  const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
   const closeEditor = useUiStore((s) => s.closeEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
@@ -47,6 +48,11 @@ export function ShortcutsListener() {
         // on next week's Friday — matches the move-to-day behavior.
         setCurrentDayKey(nextWeekday(todayKey(), 5));
         setView('today');
+        return;
+      }
+      if (e.key === 's' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setTaskSearchOpen(true);
         return;
       }
       if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -90,7 +96,7 @@ export function ShortcutsListener() {
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [openEditor, setCommandPaletteOpen, closeEditor, setHabitsEditorOpen, setCurrentDayKey, setView]);
+  }, [openEditor, setCommandPaletteOpen, setTaskSearchOpen, closeEditor, setHabitsEditorOpen, setCurrentDayKey, setView]);
 
   return null;
 }

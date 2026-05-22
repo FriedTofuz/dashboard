@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useMoveTaskStore } from '@/lib/store/useMoveTaskStore';
 import { useUiStore } from '@/lib/store/useUiStore';
-import { addDays, formatDayLabel, nextWeekday } from '@/lib/time/dayKey';
+import { addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
 import { moveTaskToDay } from '@/lib/idb/tasks';
 import { toast } from '@/lib/store/useToastStore';
 
@@ -16,7 +16,7 @@ export function MoveTaskDialog() {
   const open = useMoveTaskStore((s) => s.open);
   const options = useMoveTaskStore((s) => s.options);
   const close = useMoveTaskStore((s) => s.close);
-  const todayKey = useUiStore((s) => s.currentDayKey);
+  const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   useEffect(() => {
     if (!open) return;
@@ -30,13 +30,14 @@ export function MoveTaskDialog() {
   if (!open || !options) return null;
 
   const { monthDay: fromLabel } = formatDayLabel(options.fromDayKey);
+  const todayK = todayKey();
 
   const choices: DayChoice[] = [
-    { label: 'yesterday', dayKey: addDays(todayKey, -1) },
-    { label: 'today',     dayKey: todayKey },
-    { label: 'tomorrow',  dayKey: addDays(todayKey, 1) },
-    { label: 'friday',    dayKey: nextWeekday(todayKey, 5) },
-  ];
+    { label: 'yesterday', dayKey: addDays(todayK, -1) },
+    { label: 'today',     dayKey: todayK },
+    { label: 'tomorrow',  dayKey: addDays(todayK, 1) },
+    { label: 'friday',    dayKey: nextWeekday(todayK, 5) },
+  ].filter((c) => c.dayKey !== currentDayKey && c.dayKey !== options.fromDayKey);
 
   async function pick(choice: DayChoice) {
     if (!options) return;

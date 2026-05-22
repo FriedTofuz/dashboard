@@ -102,7 +102,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
                 <StatsActionRow />
                 <StatsCard
                   userId={userId}
-                  dayKey={currentDayKey}
+                  dayKey={today}
                   deficitSeconds={deficitSeconds}
                 />
               </div>

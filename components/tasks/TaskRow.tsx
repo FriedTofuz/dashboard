@@ -416,6 +416,7 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const openEditor = useUiStore((s) => s.openEditor);
+  const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   useEffect(() => {
     if (!open) return;
@@ -504,14 +505,18 @@ export function TaskActionMenu({ task }: TaskActionMenuProps) {
     });
   }
 
-  const today = task.day_key ?? '';
-  const moveOptions = today
+  // Destinations are absolute (real yesterday / today / tomorrow / friday),
+  // not relative to the task's current day — "move to tomorrow" always means
+  // actual tomorrow. Hide options whose destination matches the day the user
+  // is viewing or the task's current day (those would be no-ops).
+  const todayK = todayKey();
+  const moveOptions = task.day_key
     ? [
-        { label: 'yesterday', key: addDays(today, -1) },
-        { label: 'today',     key: todayKey() },
-        { label: 'tomorrow',  key: addDays(today, 1) },
-        { label: 'friday',    key: nextWeekday(today, 5) },
-      ]
+        { label: 'yesterday', key: addDays(todayK, -1) },
+        { label: 'today',     key: todayK },
+        { label: 'tomorrow',  key: addDays(todayK, 1) },
+        { label: 'friday',    key: nextWeekday(todayK, 5) },
+      ].filter((opt) => opt.key !== currentDayKey && opt.key !== task.day_key)
     : [];
 
   return (

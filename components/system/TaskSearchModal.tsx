@@ -4,22 +4,33 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDb, type Task } from '@/lib/idb/db';
 import { useUiStore } from '@/lib/store/useUiStore';
-import { formatDayLabel } from '@/lib/time/dayKey';
+import { addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
+import { deleteTask, moveTaskToDay } from '@/lib/idb/tasks';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
+import { toast } from '@/lib/store/useToastStore';
 
 interface Props {
   userId: string;
 }
 
+interface MoveChoice {
+  label: string;
+  dayKey: string;
+}
+
 /** Global task search — looks across both open and done tasks for the user,
  *  filters by title / description / completion note, jumps to the task's
- *  scheduled day on click. */
+ *  scheduled day on click. Supports multi-select with bulk delete / move. */
 export function TaskSearchModal({ userId }: Props) {
   const open = useUiStore((s) => s.taskSearchOpen);
   const setOpen = useUiStore((s) => s.setTaskSearchOpen);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
   const setView = useUiStore((s) => s.setView);
+  const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   const [q, setQ] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const tasks = useLiveQuery(
@@ -38,15 +49,24 @@ export function TaskSearchModal({ userId }: Props) {
   useEffect(() => {
     if (!open) {
       setQ('');
+      setSelected(new Set());
+      setShowMoveMenu(false);
       return;
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); setOpen(false); }
+      if (e.key === 'Escape') {
+        if (showMoveMenu) {
+          setShowMoveMenu(false);
+        } else {
+          e.preventDefault();
+          setOpen(false);
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     setTimeout(() => inputRef.current?.focus(), 0);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, setOpen]);
+  }, [open, setOpen, showMoveMenu]);
 
   const results = useMemo(() => {
     const ql = q.toLowerCase().trim();
@@ -59,7 +79,6 @@ export function TaskSearchModal({ userId }: Props) {
           (t.completion_note ?? '').toLowerCase().includes(ql),
       )
       .sort((a, b) => {
-        // Most-recent first (by scheduled day, then updated_at).
         const ak = a.day_key ?? '';
         const bk = b.day_key ?? '';
         if (ak !== bk) return bk.localeCompare(ak);
@@ -77,6 +96,60 @@ export function TaskSearchModal({ userId }: Props) {
     }
     setOpen(false);
   }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllResults() {
+    setSelected(new Set(results.map((t) => t.id)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    const ok = await themedConfirm({
+      title: `delete ${selected.size} task${selected.size === 1 ? '' : 's'}?`,
+      body: 'this can\'t be undone.',
+      confirmLabel: 'delete all',
+      cancelLabel: 'keep them',
+      danger: true,
+    });
+    if (!ok) return;
+    const ids = Array.from(selected);
+    await Promise.all(ids.map((id) => deleteTask(id)));
+    toast(`deleted ${ids.length} task${ids.length === 1 ? '' : 's'}`);
+    setSelected(new Set());
+  }
+
+  async function bulkMove(dayKey: string) {
+    if (selected.size === 0) return;
+    setShowMoveMenu(false);
+    const ids = Array.from(selected);
+    await Promise.all(ids.map((id) => moveTaskToDay(id, dayKey)));
+    const { monthDay } = formatDayLabel(dayKey);
+    toast(`moved ${ids.length} task${ids.length === 1 ? '' : 's'} to ${monthDay}`);
+    setSelected(new Set());
+  }
+
+  const todayK = todayKey();
+  const moveChoices: MoveChoice[] = [
+    { label: 'yesterday', dayKey: addDays(todayK, -1) },
+    { label: 'today',     dayKey: todayK },
+    { label: 'tomorrow',  dayKey: addDays(todayK, 1) },
+    { label: 'friday',    dayKey: nextWeekday(todayK, 5) },
+  ].filter((c) => c.dayKey !== currentDayKey);
+
+  const hasSelection = selected.size > 0;
+  const allSelected = results.length > 0 && results.every((t) => selected.has(t.id));
 
   return (
     <div
@@ -125,6 +198,143 @@ export function TaskSearchModal({ userId }: Props) {
           </button>
         </div>
 
+        {/* Bulk action bar — shows whenever any row is selected. */}
+        {hasSelection && (
+          <div
+            className="row items-center"
+            style={{
+              gap: 10,
+              padding: '8px 10px',
+              borderRadius: 5,
+              background: 'var(--paper-warm, rgba(232, 178, 96, 0.08))',
+              border: '1.5px solid var(--ink-soft)',
+              position: 'relative',
+            }}
+          >
+            <span className="ui-b" style={{ fontSize: 13, color: 'var(--ink)' }}>
+              {selected.size} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowMoveMenu((v) => !v)}
+              className="ui hover:bg-paper-warm transition-colors"
+              style={{
+                border: '1.5px solid var(--ink-soft)',
+                background: 'var(--paper)',
+                color: 'var(--ink)',
+                padding: '5px 10px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+              }}
+            >
+              move to day ▾
+            </button>
+            {showMoveMenu && (
+              <div
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 90,
+                  marginTop: 4,
+                  background: 'var(--paper)',
+                  border: '1.5px solid var(--ink-soft)',
+                  borderRadius: 6,
+                  padding: 4,
+                  minWidth: 180,
+                  boxShadow: 'var(--shadow)',
+                  zIndex: 60,
+                  fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+                  fontSize: 13,
+                }}
+              >
+                {moveChoices.length === 0 ? (
+                  <span
+                    className="muted caption italic"
+                    style={{ padding: '6px 10px', display: 'block' }}
+                  >
+                    no other day options
+                  </span>
+                ) : (
+                  moveChoices.map((c) => (
+                    <button
+                      key={c.dayKey}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void bulkMove(c.dayKey)}
+                      className="hover:bg-paper-warm transition-colors"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '6px 10px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 4,
+                        color: 'var(--ink)',
+                        cursor: 'pointer',
+                        font: 'inherit',
+                        gap: 12,
+                      }}
+                    >
+                      <span>{c.label}</span>
+                      <span className="num" style={{ color: 'var(--ink-faint)', fontSize: 11 }}>
+                        {c.dayKey.slice(5)}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => void bulkDelete()}
+              className="ui hover:bg-paper-warm transition-colors"
+              style={{
+                border: '1.5px solid var(--terra-deep)',
+                background: 'transparent',
+                color: 'var(--terra-deep)',
+                padding: '5px 10px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+              }}
+            >
+              delete
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="tiny"
+              style={{ marginLeft: 'auto' }}
+              aria-label="Clear selection"
+            >
+              clear
+            </button>
+          </div>
+        )}
+
+        {/* Select-all toggle, visible whenever there are results. */}
+        {results.length > 0 && (
+          <button
+            type="button"
+            onClick={allSelected ? clearSelection : selectAllResults}
+            className="tiny hover:bg-paper-warm transition-colors"
+            style={{
+              alignSelf: 'flex-start',
+              background: 'transparent',
+              border: 'none',
+              padding: '2px 6px',
+              borderRadius: 3,
+              cursor: 'pointer',
+            }}
+          >
+            {allSelected ? 'clear all' : `select all ${results.length}`}
+          </button>
+        )}
+
         <div
           className="col"
           style={{ gap: 2, overflowY: 'auto', minHeight: 0, flex: 1 }}
@@ -138,56 +348,74 @@ export function TaskSearchModal({ userId }: Props) {
           ) : (
             results.map((t) => {
               const day = t.day_key ? formatDayLabel(t.day_key).monthDay : 'backlog';
+              const isSel = selected.has(t.id);
               return (
-                <button
+                <div
                   key={t.id}
-                  type="button"
-                  onClick={() => jumpTo(t)}
                   className="row items-center hover:bg-paper-warm transition-colors"
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    padding: '8px 8px',
+                    padding: '6px 8px',
                     borderRadius: 5,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    gap: 12,
+                    gap: 10,
+                    background: isSel ? 'var(--sage-wash, rgba(107, 138, 92, 0.10))' : 'transparent',
                   }}
                 >
-                  <span
-                    className="hand flex-1"
+                  <input
+                    type="checkbox"
+                    checked={isSel}
+                    onChange={() => toggleSelected(t.id)}
+                    aria-label={`Select ${t.title}`}
+                    style={{ flexShrink: 0, cursor: 'pointer' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => jumpTo(t)}
+                    className="row items-center flex-1 min-w-0"
                     style={{
-                      fontSize: 17,
-                      lineHeight: 1.2,
-                      color: t.state === 'done' ? 'var(--ink-faint)' : 'var(--ink)',
-                      textDecoration: t.state === 'done' ? 'line-through' : 'none',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      gap: 12,
                     }}
                   >
-                    {t.title}
-                  </span>
-                  {t.r3_slot != null && (
                     <span
-                      className="ui-b"
+                      className="hand flex-1"
                       style={{
-                        fontSize: 10,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'var(--sage-deep)',
+                        fontSize: 17,
+                        lineHeight: 1.2,
+                        color: t.state === 'done' ? 'var(--ink-faint)' : 'var(--ink)',
+                        textDecoration: t.state === 'done' ? 'line-through' : 'none',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
                       }}
                     >
-                      R3·{t.r3_slot}
+                      {t.title}
                     </span>
-                  )}
-                  <span
-                    className="tiny num"
-                    style={{ flexShrink: 0, color: 'var(--ink-faint)' }}
-                  >
-                    {day}
-                  </span>
-                </button>
+                    {t.r3_slot != null && (
+                      <span
+                        className="ui-b"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          color: 'var(--sage-deep)',
+                        }}
+                      >
+                        R3·{t.r3_slot}
+                      </span>
+                    )}
+                    <span
+                      className="tiny num"
+                      style={{ flexShrink: 0, color: 'var(--ink-faint)' }}
+                    >
+                      {day}
+                    </span>
+                  </button>
+                </div>
               );
             })
           )}
@@ -197,7 +425,9 @@ export function TaskSearchModal({ userId }: Props) {
           className="tiny"
           style={{ color: 'var(--ink-faint)', alignSelf: 'flex-start' }}
         >
-          {results.length > 0 && `${results.length} match${results.length === 1 ? '' : 'es'} · esc to close`}
+          {results.length > 0
+            ? `${results.length} match${results.length === 1 ? '' : 'es'} · click to jump · check to bulk-edit · esc to close`
+            : ''}
         </span>
       </div>
     </div>

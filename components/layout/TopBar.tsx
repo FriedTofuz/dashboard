@@ -36,6 +36,10 @@ export function TopBar() {
   const { currentDayKey, setCurrentDayKey } = useUiStore();
   const today = todayKey();
   const { weekday, monthDay } = formatDayLabel(currentDayKey);
+  // Title font: "Monday, May 21" — Caveat hand for warmth without the
+  // oversized v2 headline; weekday is capitalized for readability.
+  const weekdayCap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const titleText = `${weekdayCap}, ${monthDay}`;
 
   // Window of 5 days centered on the selected day (so the user always has
   // ±2 context when they jump to a date via search or the today button)
@@ -57,26 +61,21 @@ export function TopBar() {
   }
 
   return (
-    <div className="row items-end justify-between mb-1 gap-6 flex-wrap">
-      {/* Date display — Month Day on the same baseline as the date pills,
-          with the weekday tucked inline (small caps) to the left of the title. */}
-      <div className="row items-baseline" style={{ gap: 12 }}>
-        <span className="tiny" style={{ letterSpacing: '0.14em' }}>{weekday}</span>
-        <h1
-          className="font-hand v2-date-display"
-          style={{
-            fontSize: 46,
-            lineHeight: 1,
-            fontWeight: 600,
-            position: 'relative',
-            display: 'inline-block',
-            paddingBottom: 6,
-            margin: 0,
-          }}
-        >
-          <span className="underline-hand">{monthDay}</span>
-        </h1>
-      </div>
+    <div className="row items-center justify-between mb-1 gap-6 flex-wrap">
+      {/* Date display — "Monday, May 21" on a single line, sized to share a
+          baseline with the date-selector pills next to it. */}
+      <h1
+        className="font-hand v2-date-display"
+        style={{
+          fontSize: 32,
+          lineHeight: 1.1,
+          fontWeight: 600,
+          margin: 0,
+          color: 'var(--ink)',
+        }}
+      >
+        <span className="underline-hand">{titleText}</span>
+      </h1>
 
       {/* Day range pills + reset + search */}
       <div className="row items-center gap-2.5 no-print flex-wrap">
