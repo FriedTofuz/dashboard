@@ -291,7 +291,7 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
           {task.state === 'done' ? '↺' : '✓'}
         </button>
 
-        <R3SlotMenu task={task} dayKey={dayKey} />
+        <R3SlotMenu task={task} />
       </div>
     </div>
   );
@@ -301,10 +301,9 @@ export function RuleOf3Slot({ slot, task, dayKey }: RuleOf3SlotProps) {
 
 interface R3SlotMenuProps {
   task: Task;
-  dayKey: string;
 }
 
-function R3SlotMenu({ task, dayKey }: R3SlotMenuProps) {
+function R3SlotMenu({ task }: R3SlotMenuProps) {
   const [open, setOpen] = useState(false);
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
