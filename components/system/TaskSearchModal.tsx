@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { getDb, type Task } from '@/lib/idb/db';
+import { getDb, type Label, type Task } from '@/lib/idb/db';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { addDays, formatDayLabel, nextWeekday, todayKey } from '@/lib/time/dayKey';
 import { deleteTask, moveTaskToDay } from '@/lib/idb/tasks';
+import {
+  assignLabelToTasks,
+  createLabel,
+  LABEL_COLOR_PRESETS,
+} from '@/lib/idb/labels';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast } from '@/lib/store/useToastStore';
 
@@ -31,7 +36,18 @@ export function TaskSearchModal({ userId }: Props) {
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showLabelMenu, setShowLabelMenu] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const labels = useLiveQuery(
+    () =>
+      open
+        ? getDb().labels.where('user_id').equals(userId).sortBy('name')
+        : Promise.resolve([] as Label[]),
+    [userId, open],
+    [],
+  );
 
   const tasks = useLiveQuery(
     () =>
@@ -51,12 +67,16 @@ export function TaskSearchModal({ userId }: Props) {
       setQ('');
       setSelected(new Set());
       setShowMoveMenu(false);
+      setShowLabelMenu(false);
+      setNewLabelName('');
       return;
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showMoveMenu) {
           setShowMoveMenu(false);
+        } else if (showLabelMenu) {
+          setShowLabelMenu(false);
         } else {
           e.preventDefault();
           setOpen(false);
@@ -66,7 +86,7 @@ export function TaskSearchModal({ userId }: Props) {
     window.addEventListener('keydown', onKey);
     setTimeout(() => inputRef.current?.focus(), 0);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, setOpen, showMoveMenu]);
+  }, [open, setOpen, showMoveMenu, showLabelMenu]);
 
   const results = useMemo(() => {
     const ql = q.toLowerCase().trim();
@@ -138,6 +158,27 @@ export function TaskSearchModal({ userId }: Props) {
     const { monthDay } = formatDayLabel(dayKey);
     toast(`moved ${ids.length} task${ids.length === 1 ? '' : 's'} to ${monthDay}`);
     setSelected(new Set());
+  }
+
+  async function bulkAddLabel(labelId: string, labelName: string) {
+    if (selected.size === 0) return;
+    setShowLabelMenu(false);
+    const ids = Array.from(selected);
+    await assignLabelToTasks(ids, labelId, userId);
+    toast(`labeled ${ids.length} task${ids.length === 1 ? '' : 's'} "${labelName}"`);
+    // Keep the selection so the user can chain more bulk actions.
+  }
+
+  async function bulkCreateAndAddLabel() {
+    const name = newLabelName.trim();
+    if (!name || selected.size === 0) return;
+    const sortOrder = (labels ?? []).length;
+    const color = LABEL_COLOR_PRESETS[sortOrder % LABEL_COLOR_PRESETS.length];
+    const id = await createLabel({ name, color, sort_order: sortOrder }, userId);
+    await assignLabelToTasks(Array.from(selected), id, userId);
+    toast(`created label "${name}" and tagged ${selected.size} task${selected.size === 1 ? '' : 's'}`);
+    setNewLabelName('');
+    setShowLabelMenu(false);
   }
 
   const todayK = todayKey();
@@ -286,6 +327,134 @@ export function TaskSearchModal({ userId }: Props) {
                     </button>
                   ))
                 )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { setShowLabelMenu((v) => !v); setShowMoveMenu(false); }}
+              className="ui hover:bg-paper-warm transition-colors"
+              style={{
+                border: '1.5px solid var(--ink-soft)',
+                background: 'var(--paper)',
+                color: 'var(--ink)',
+                padding: '5px 10px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+              }}
+            >
+              add label ▾
+            </button>
+            {showLabelMenu && (
+              <div
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 200,
+                  marginTop: 4,
+                  background: 'var(--paper)',
+                  border: '1.5px solid var(--ink-soft)',
+                  borderRadius: 6,
+                  padding: 6,
+                  minWidth: 220,
+                  boxShadow: 'var(--shadow)',
+                  zIndex: 60,
+                  fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+                  fontSize: 13,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  maxHeight: 280,
+                  overflowY: 'auto',
+                }}
+              >
+                {(labels ?? []).length === 0 && (
+                  <span
+                    className="muted caption italic"
+                    style={{ padding: '4px 6px' }}
+                  >
+                    no labels yet — create one below
+                  </span>
+                )}
+                {(labels ?? []).map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void bulkAddLabel(l.id, l.name)}
+                    className="row items-center hover:bg-paper-warm transition-colors"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '5px 6px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 999,
+                        background: l.color,
+                        border: '1px solid var(--ink-soft)',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ flex: 1 }}>{l.name}</span>
+                  </button>
+                ))}
+                <div
+                  style={{
+                    borderTop: '1px solid var(--rule)',
+                    marginTop: 4,
+                    paddingTop: 6,
+                  }}
+                >
+                  <div className="row items-center" style={{ gap: 6 }}>
+                    <input
+                      type="text"
+                      value={newLabelName}
+                      onChange={(e) => setNewLabelName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void bulkCreateAndAddLabel();
+                        }
+                      }}
+                      placeholder="+ new label name"
+                      className="hand bg-transparent flex-1"
+                      style={{
+                        border: 'none',
+                        borderBottom: '1px solid var(--ink-faint)',
+                        padding: '2px 4px',
+                        outline: 'none',
+                        fontSize: 14,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void bulkCreateAndAddLabel()}
+                      disabled={!newLabelName.trim()}
+                      className="ui hover:bg-paper-warm transition-colors disabled:opacity-50"
+                      style={{
+                        border: '1.5px solid var(--ink-soft)',
+                        background: 'var(--paper)',
+                        color: 'var(--ink)',
+                        padding: '3px 8px',
+                        borderRadius: 4,
+                        cursor: newLabelName.trim() ? 'pointer' : 'default',
+                        fontSize: 11,
+                      }}
+                    >
+                      create
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
             <button

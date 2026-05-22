@@ -19,6 +19,11 @@ export function ShortcutsListener() {
   const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
   const closeEditor = useUiStore((s) => s.closeEditor);
   const setHabitsEditorOpen = useUiStore((s) => s.setHabitsEditorOpen);
+  const setLabelsManagerOpen = useUiStore((s) => s.setLabelsManagerOpen);
+  const setQuotesManagerOpen = useUiStore((s) => s.setQuotesManagerOpen);
+  const setNotepadArchiveOpen = useUiStore((s) => s.setNotepadArchiveOpen);
+  const setScratchOpen = useUiStore((s) => s.setScratchOpen);
+  const clearCompletion = useUiStore((s) => s.clearCompletion);
   const setCurrentDayKey = useUiStore((s) => s.setCurrentDayKey);
   const setView = useUiStore((s) => s.setView);
 
@@ -81,6 +86,12 @@ export function ShortcutsListener() {
         closeEditor();
         setCommandPaletteOpen(false);
         setHabitsEditorOpen(false);
+        setLabelsManagerOpen(false);
+        setQuotesManagerOpen(false);
+        setNotepadArchiveOpen(false);
+        setScratchOpen(false);
+        setTaskSearchOpen(false);
+        clearCompletion();
         return;
       }
       if (e.key === ' ') {
@@ -96,7 +107,20 @@ export function ShortcutsListener() {
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [openEditor, setCommandPaletteOpen, setTaskSearchOpen, closeEditor, setHabitsEditorOpen, setCurrentDayKey, setView]);
+  }, [
+    openEditor,
+    setCommandPaletteOpen,
+    setTaskSearchOpen,
+    closeEditor,
+    setHabitsEditorOpen,
+    setLabelsManagerOpen,
+    setQuotesManagerOpen,
+    setNotepadArchiveOpen,
+    setScratchOpen,
+    clearCompletion,
+    setCurrentDayKey,
+    setView,
+  ]);
 
   return null;
 }

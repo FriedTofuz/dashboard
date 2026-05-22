@@ -12,6 +12,7 @@ export async function setDayNotes(userId: string, dayKey: string, notes: string)
     notes,
     flower_state: existing?.flower_state ?? 'healthy',
     deficit_seconds: existing?.deficit_seconds ?? 0,
+    logged_at: existing?.logged_at ?? null,
   };
   await db.days.put(next);
   enqueue('upsert', 'days', `${userId}_${dayKey}`, {
@@ -20,6 +21,7 @@ export async function setDayNotes(userId: string, dayKey: string, notes: string)
     notes,
     flower_state: next.flower_state,
     deficit_seconds: next.deficit_seconds,
+    logged_at: next.logged_at != null ? new Date(next.logged_at).toISOString() : null,
   });
 }
 
@@ -37,6 +39,7 @@ export async function setDayFlowerState(
     notes: existing?.notes ?? '',
     flower_state: state,
     deficit_seconds: deficitSeconds,
+    logged_at: existing?.logged_at ?? null,
   };
   await db.days.put(next);
   enqueue('upsert', 'days', `${userId}_${dayKey}`, {
@@ -45,5 +48,32 @@ export async function setDayFlowerState(
     notes: next.notes,
     flower_state: state,
     deficit_seconds: deficitSeconds,
+    logged_at: next.logged_at != null ? new Date(next.logged_at).toISOString() : null,
   });
+}
+
+/** Toggle the "logged" flag for a day. Only logged days count toward
+ *  cumulative stats / streak; unlogged days render blank. */
+export async function toggleDayLogged(userId: string, dayKey: string): Promise<boolean> {
+  const db = getDb();
+  const existing = await db.days.get([userId, dayKey]);
+  const wasLogged = existing?.logged_at != null;
+  const next: Day = {
+    user_id: userId,
+    day_key: dayKey,
+    notes: existing?.notes ?? '',
+    flower_state: existing?.flower_state ?? 'healthy',
+    deficit_seconds: existing?.deficit_seconds ?? 0,
+    logged_at: wasLogged ? null : Date.now(),
+  };
+  await db.days.put(next);
+  enqueue('upsert', 'days', `${userId}_${dayKey}`, {
+    user_id: userId,
+    day_key: dayKey,
+    notes: next.notes,
+    flower_state: next.flower_state,
+    deficit_seconds: next.deficit_seconds,
+    logged_at: next.logged_at != null ? new Date(next.logged_at).toISOString() : null,
+  });
+  return !wasLogged;
 }

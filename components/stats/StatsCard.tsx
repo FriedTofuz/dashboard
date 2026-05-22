@@ -47,9 +47,11 @@ function StatChip({ label, value, accent }: StatChipProps) {
 }
 
 /** Lerp from red (0%) → yellow (50%) → green (100%). Returns an rgb string. */
-function gradientColor(pct: number, hasContent: boolean): string {
-  if (!hasContent) {
-    // Empty / habit-only day — neutral wash, no opinion.
+function gradientColor(pct: number, hasContent: boolean, logged: boolean): string {
+  if (!hasContent || !logged) {
+    // Empty / habit-only day OR unlogged day — neutral wash, no opinion.
+    // Logging is opt-in so stats only reflect days the user explicitly
+    // confirms; otherwise an offline day would read as 0%.
     return 'rgba(180, 170, 158, 0.18)';
   }
   const p = Math.max(0, Math.min(100, pct));
@@ -75,9 +77,9 @@ function gradientColor(pct: number, hasContent: boolean): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-function gradientBorder(pct: number, hasContent: boolean): string {
-  if (!hasContent) return '1px solid var(--ink-faint)';
-  return `1px solid ${gradientColor(pct, true)}`;
+function gradientBorder(pct: number, hasContent: boolean, logged: boolean): string {
+  if (!hasContent || !logged) return '1px solid var(--ink-faint)';
+  return `1px solid ${gradientColor(pct, true, true)}`;
 }
 
 export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: StatsCardProps) {
@@ -151,12 +153,18 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                 <div
                   key={i}
                   className="wobble"
-                  title={d.hasContent ? `${d.day} · ${d.pct}%` : `${d.day} · no tasks`}
+                  title={
+                    !d.hasContent
+                      ? `${d.day} · no tasks`
+                      : !d.logged
+                        ? `${d.day} · unlogged`
+                        : `${d.day} · ${d.pct}%`
+                  }
                   style={{
                     aspectRatio: '1 / 1',
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent),
-                    background: gradientColor(d.pct, d.hasContent),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged),
+                    background: gradientColor(d.pct, d.hasContent, d.logged),
                   }}
                 />
               ))}
@@ -167,13 +175,19 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                 <div
                   key={i}
                   className="wobble"
-                  title={d.hasContent ? `${d.day} · ${d.pct}%` : `${d.day} · no tasks`}
+                  title={
+                    !d.hasContent
+                      ? `${d.day} · no tasks`
+                      : !d.logged
+                        ? `${d.day} · unlogged`
+                        : `${d.day} · ${d.pct}%`
+                  }
                   style={{
                     width: 16,
                     height: 16,
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent),
-                    background: gradientColor(d.pct, d.hasContent),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged),
+                    background: gradientColor(d.pct, d.hasContent, d.logged),
                   }}
                 />
               ))}

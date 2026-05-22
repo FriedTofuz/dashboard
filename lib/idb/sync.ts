@@ -358,6 +358,7 @@ function remoteRowToTask(row: Record<string, unknown>): Task {
     subtasks:         (row.subtasks as Task['subtasks']) ?? null,
     start_time:       (row.start_time as string | null) ?? null,
     end_time:         (row.end_time as string | null) ?? null,
+    habit_title:      (row.habit_title as string | null) ?? null,
     created_at:       new Date(row.created_at as string).getTime(),
     updated_at:       new Date(row.updated_at as string).getTime(),
   };
@@ -387,6 +388,7 @@ function remoteRowToDay(row: Record<string, unknown>): Day {
     notes:           (row.notes as string) ?? '',
     flower_state:    (row.flower_state as Day['flower_state']) ?? 'healthy',
     deficit_seconds: (row.deficit_seconds as number) ?? 0,
+    logged_at:       row.logged_at ? new Date(row.logged_at as string).getTime() : null,
   };
 }
 

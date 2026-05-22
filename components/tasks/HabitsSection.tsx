@@ -16,7 +16,14 @@ export function HabitsSection({ dayKey }: HabitsSectionProps) {
       getDb()
         .tasks.where('day_key')
         .equals(dayKey)
-        .filter((t) => !t.archived && t.template_id != null && t.r3_slot == null)
+        .filter(
+          (t) =>
+            !t.archived &&
+            t.r3_slot == null &&
+            // Live habit (template_id present) OR detached completed habit
+            // instance preserved via habit_title snapshot.
+            (t.template_id != null || t.habit_title != null),
+        )
         .sortBy('sort_order'),
     [dayKey],
     [],

@@ -33,6 +33,7 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
           (t) =>
             !t.archived &&
             t.template_id == null &&
+            t.habit_title == null &&
             t.r3_slot == null,
         )
         .toArray(),
@@ -53,6 +54,7 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
                 !t.archived &&
                 !t.skipped &&
                 t.template_id == null &&
+                t.habit_title == null &&
                 t.r3_slot == null &&
                 t.state !== 'done',
             )
