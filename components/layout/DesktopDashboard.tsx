@@ -23,6 +23,7 @@ import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
 import { PasswordsModal } from '@/components/system/PasswordsModal';
+import { BreakTimerDialog } from '@/components/system/BreakTimerDialog';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
@@ -72,7 +73,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
         >
           <PrintHeader />
 
-          {view !== 'archive' && <TopBar />}
+          {view !== 'archive' && <TopBar userId={userId} />}
 
           {view === 'today' && (
             <div
@@ -133,6 +134,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
       <PasswordsModal userId={userId} />
+      <BreakTimerDialog />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

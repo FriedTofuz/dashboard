@@ -6,7 +6,12 @@ import { useUiStore } from '@/lib/store/useUiStore';
 import { useAccentStore } from '@/lib/store/useAccentStore';
 import { useDayHeat } from '@/lib/hooks/useDayHeat';
 import { heatColor, heatNeedsLightText } from '@/lib/compute/dayHeat';
+import { StatusMenu } from '@/components/system/StatusMenu';
 import { cn } from '@/lib/utils';
+
+interface TopBarProps {
+  userId: string;
+}
 
 function shortWeekday(full: string): string {
   const s = full.slice(0, 3);
@@ -35,9 +40,10 @@ function parseSearchDate(input: string): string | null {
   return toDayKey(date);
 }
 
-export function TopBar() {
+export function TopBar({ userId }: TopBarProps) {
   const { currentDayKey, setCurrentDayKey } = useUiStore();
   const today = todayKey();
+  const onToday = currentDayKey === today;
   const { weekday, monthDay } = formatDayLabel(currentDayKey);
   // Title font: "Monday, May 21" — Caveat hand for warmth without the
   // oversized v2 headline; weekday is capitalized for readability.
@@ -87,28 +93,31 @@ export function TopBar() {
         <span className="underline-hand">{titleText}</span>
       </h1>
 
-      {/* Day range pills + reset + search */}
+      {/* Day range pills + reset/status + search */}
       <div className="row items-center gap-2.5 no-print flex-wrap">
-        <button
-          type="button"
-          onClick={() => setCurrentDayKey(today)}
-          disabled={currentDayKey === today}
-          className="wobble transition-colors hover:bg-paper-warm disabled:opacity-50"
-          style={{
-            fontFamily: 'var(--font-hand), cursive',
-            fontWeight: 600,
-            fontSize: 17,
-            color: 'var(--ink-faint)',
-            border: '1.5px solid var(--ink-soft)',
-            borderRadius: 5,
-            padding: '4px 10px 5px',
-            background: 'var(--paper)',
-            cursor: currentDayKey === today ? 'default' : 'pointer',
-          }}
-          aria-label="Reset to today"
-        >
-          ← today
-        </button>
+        {onToday ? (
+          <StatusMenu userId={userId} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCurrentDayKey(today)}
+            className="wobble transition-colors hover:bg-paper-warm"
+            style={{
+              fontFamily: 'var(--font-hand), cursive',
+              fontWeight: 600,
+              fontSize: 17,
+              color: 'var(--ink-faint)',
+              border: '1.5px solid var(--ink-soft)',
+              borderRadius: 5,
+              padding: '4px 10px 5px',
+              background: 'var(--paper)',
+              cursor: 'pointer',
+            }}
+            aria-label="Reset to today"
+          >
+            ← today
+          </button>
+        )}
 
         <div className="row gap-1.5">
           {days.map((key) => {
@@ -120,19 +129,22 @@ export function TopBar() {
 
             const heat = heatByDay.get(key);
             // A pill gets the progress tint when it represents a past or
-            // present day with logged content. Selected pill always wears
-            // terra so "you are here" stays unambiguous.
+            // present day with logged content. Away/rest days ALSO show
+            // their tint (secondary accent) even though they're not real
+            // progress — the spec says rest days should read as rest days
+            // at a glance. Selected pill always wears terra so "you are
+            // here" stays unambiguous.
+            const isAway = !!heat?.away;
             const showHeat =
               !isSelected &&
               !isFuture &&
               heat != null &&
-              heat.hasContent &&
-              heat.logged;
+              (isAway || (heat.hasContent && heat.logged));
             const heatBg = showHeat
-              ? heatColor(heat.pct, true, true, berkeley)
+              ? heatColor(heat.pct, true, true, berkeley, isAway)
               : null;
             const useLightText = showHeat
-              ? heatNeedsLightText(heat.pct, true, true, berkeley)
+              ? heatNeedsLightText(heat.pct, true, true, berkeley, isAway)
               : false;
 
             // Selected = filled terra. Today (when not selected) gets a faint
@@ -168,9 +180,11 @@ export function TopBar() {
                 onClick={() => setCurrentDayKey(key)}
                 aria-current={isSelected ? 'date' : undefined}
                 title={
-                  heat && heat.hasContent && heat.logged
-                    ? `${heat.pct}% complete`
-                    : undefined
+                  heat?.away
+                    ? 'away (rest day)'
+                    : heat && heat.hasContent && heat.logged
+                      ? `${heat.pct}% complete`
+                      : undefined
                 }
                 className={cn('wobble transition-colors', !isSelected && !showHeat && 'hover:bg-paper-warm')}
                 style={{

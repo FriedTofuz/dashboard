@@ -121,6 +121,10 @@ export interface Day {
    *  button. Only logged days count toward cumulative stats / streak.
    *  null = unlogged (transient — stats ignore it). */
   logged_at: number | null;
+  /** True when this is a "rest day" — set by the Away status. Rest days
+   *  render in the streak strip with the secondary accent (ochre / gold)
+   *  and are skipped by the streak count. */
+  away?: boolean;
 }
 
 export interface NotepadPage {
@@ -243,6 +247,24 @@ export class SunflowerDB extends Dexie {
       passwords:      'id, user_id, name, updated_at, [user_id+name]',
       write_queue:    '++id, table, row_id, attempted_at',
     });
+    // v5 — day.away rest-day flag (set by the Away status).
+    this.version(5)
+      .stores({
+        tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+        habit_templates:'id, user_id, active, kind, [user_id+active]',
+        days:           '[user_id+day_key], user_id, day_key',
+        notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+        settings:       'user_id',
+        labels:         'id, user_id, name, [user_id+name]',
+        task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+        passwords:      'id, user_id, name, updated_at, [user_id+name]',
+        write_queue:    '++id, table, row_id, attempted_at',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('days').toCollection().modify((d) => {
+          if (d.away === undefined) d.away = false;
+        });
+      });
   }
 }
 

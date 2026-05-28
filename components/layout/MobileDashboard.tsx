@@ -25,6 +25,7 @@ import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
 import { PasswordsModal } from '@/components/system/PasswordsModal';
+import { BreakTimerDialog } from '@/components/system/BreakTimerDialog';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
@@ -81,7 +82,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
         >
           {tab === 'today' && (
             <div className="col" style={{ gap: 24 }}>
-              <TopBar />
+              <TopBar userId={userId} />
               <ProgressCard dayKey={currentDayKey} deficitSeconds={deficitSeconds} />
               <RuleOf3Row dayKey={currentDayKey} />
               <div className="col" style={{ gap: 10 }}>
@@ -250,6 +251,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
       <PasswordsModal userId={userId} />
+      <BreakTimerDialog />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />

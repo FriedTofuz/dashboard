@@ -12,6 +12,8 @@ interface DayHeatCell {
   hasContent: boolean;
   /** True when the user has explicitly logged this day via Log Day. */
   logged: boolean;
+  /** True when the day is marked Away (rest day). Streak skips it. */
+  away: boolean;
 }
 
 interface Stats {
@@ -69,8 +71,10 @@ export function useStats(currentDayKey: string): Stats {
   }
 
   const loggedSet = new Set<string>();
+  const awaySet = new Set<string>();
   for (const d of dayRecs ?? []) {
     if (d.logged_at != null) loggedSet.add(d.day_key);
+    if (d.away) awaySet.add(d.day_key);
   }
 
   const heatmap: DayHeatCell[] = windowKeys.map((day) => {
@@ -80,12 +84,15 @@ export function useStats(currentDayKey: string): Stats {
       pct: progressForDay(list).value,
       hasContent: dayHasContent(list),
       logged: loggedSet.has(day),
+      away: awaySet.has(day),
     };
   });
 
-  // Week avg only counts logged content days. Unlogged days are treated as
-  // "no data" — they don't drag the average down or up.
-  const weekSlice = heatmap.slice(0, 7).filter((d) => d.hasContent && d.logged);
+  // Week avg only counts logged content days. Unlogged and away days are
+  // treated as "no data" — they don't drag the average down or up.
+  const weekSlice = heatmap
+    .slice(0, 7)
+    .filter((d) => d.hasContent && d.logged && !d.away);
   const weekAvgPct = weekSlice.length
     ? Math.round(weekSlice.reduce((s, d) => s + d.pct, 0) / weekSlice.length)
     : 0;
@@ -94,10 +101,11 @@ export function useStats(currentDayKey: string): Stats {
 
   // Trailing R3-complete streak — only LOGGED content days extend the
   // streak. An unlogged day is a "gap" that breaks the run. (Habit-only
-  // days are still skipped silently — they neither extend nor break.)
+  // and away/rest days are skipped silently — they neither extend nor break.)
   let streakLen = 0;
   for (let i = 0; i < streakHeat.length; i++) {
     const cell = streakHeat[i];
+    if (cell.away) continue;
     if (!cell.hasContent) continue;
     if (!cell.logged) break;
     const list = byDay.get(cell.day) ?? [];

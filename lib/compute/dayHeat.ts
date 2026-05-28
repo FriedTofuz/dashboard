@@ -9,12 +9,22 @@
 
 const NEUTRAL_WASH = 'rgba(180, 170, 158, 0.18)';
 
+/** Color for an "Away" rest day — secondary accent (ochre default, the
+ *  vibrant Berkeley gold under the Berkeley accent). Distinct from the
+ *  red→green / blue gradient so rest days stand out visually. */
+const AWAY_DEFAULT = '#C98A2E'; // --ochre
+const AWAY_BERKELEY = '#FDB515'; // Berkeley gold
+
 export function heatColor(
   pct: number,
   hasContent: boolean,
   logged: boolean,
   berkeley: boolean,
+  away = false,
 ): string {
+  if (away) {
+    return berkeley ? AWAY_BERKELEY : AWAY_DEFAULT;
+  }
   if (!hasContent || !logged) {
     // Empty / habit-only day OR unlogged day — neutral wash, no opinion.
     return NEUTRAL_WASH;
@@ -58,7 +68,9 @@ export function heatBorder(
   hasContent: boolean,
   logged: boolean,
   berkeley: boolean,
+  away = false,
 ): string {
+  if (away) return `1px solid ${heatColor(pct, true, true, berkeley, true)}`;
   if (!hasContent || !logged) return '1px solid var(--ink-faint)';
   return `1px solid ${heatColor(pct, true, true, berkeley)}`;
 }
@@ -78,7 +90,11 @@ export function heatNeedsLightText(
   logged: boolean,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _berkeley: boolean,
+  away = false,
 ): boolean {
+  // Away colors (ochre / Berkeley gold) are mid-luminance — ink stays
+  // readable. Default to dark text.
+  if (away) return false;
   if (!hasContent || !logged) return false;
   return pct >= 65;
 }

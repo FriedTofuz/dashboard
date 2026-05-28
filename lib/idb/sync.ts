@@ -451,6 +451,7 @@ function remoteRowToDay(row: Record<string, unknown>): Day {
     flower_state:    (row.flower_state as Day['flower_state']) ?? 'healthy',
     deficit_seconds: (row.deficit_seconds as number) ?? 0,
     logged_at:       row.logged_at ? new Date(row.logged_at as string).getTime() : null,
+    away:            (row.away as boolean | null) ?? false,
   };
 }
 
