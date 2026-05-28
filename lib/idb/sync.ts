@@ -8,6 +8,7 @@ import {
   type HabitTemplate,
   type Day,
   type NotepadPage,
+  type Password,
   type Settings,
 } from './db';
 
@@ -207,6 +208,7 @@ export async function pullSettings(userId: string): Promise<void> {
       deficit_seconds: 0,
       push_subscription: null,
       reduced_motion: false,
+      password_pin_hash: null,
       updated_at: Date.now(),
     };
     await db.settings.put(fresh);
@@ -223,8 +225,39 @@ export async function pullSettings(userId: string): Promise<void> {
     deficit_seconds: data.deficit_seconds ?? 0,
     push_subscription: data.push_subscription ?? null,
     reduced_motion: data.reduced_motion ?? false,
+    password_pin_hash: (data.password_pin_hash as string | null) ?? null,
     updated_at: new Date(data.updated_at).getTime(),
   });
+}
+
+export async function pullPasswords(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('passwords')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull passwords failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    const remote: Password = {
+      id:         row.id,
+      user_id:    row.user_id,
+      name:       row.name ?? '',
+      username:   row.username ?? '',
+      password:   row.password ?? '',
+      sites:      row.sites ?? '',
+      note:       row.note ?? '',
+      created_at: new Date(row.created_at).getTime(),
+      updated_at: new Date(row.updated_at).getTime(),
+    };
+    const local = await db.passwords.get(remote.id);
+    if (!local || remote.updated_at > local.updated_at) {
+      await db.passwords.put(remote);
+    }
+  }
 }
 
 // ── Realtime ───────────────────────────────────────────────────────────────
@@ -266,8 +299,36 @@ export function subscribeRealtime(userId: string): () => void {
             deficit_seconds: (row.deficit_seconds as number) ?? 0,
             push_subscription: (row.push_subscription as PushSubscriptionJSON | null) ?? null,
             reduced_motion: (row.reduced_motion as boolean) ?? false,
+            password_pin_hash: (row.password_pin_hash as string | null) ?? null,
             updated_at: new Date(row.updated_at as string).getTime(),
           });
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'passwords', filter: `user_id=eq.${userId}` },
+      async (payload) => {
+        const db = getDb();
+        if (payload.eventType === 'DELETE') {
+          await db.passwords.delete((payload.old as { id: string }).id);
+        } else if (payload.new) {
+          const row = payload.new as Record<string, unknown>;
+          const remote: Password = {
+            id:         row.id as string,
+            user_id:    row.user_id as string,
+            name:       (row.name as string) ?? '',
+            username:   (row.username as string) ?? '',
+            password:   (row.password as string) ?? '',
+            sites:      (row.sites as string) ?? '',
+            note:       (row.note as string) ?? '',
+            created_at: new Date(row.created_at as string).getTime(),
+            updated_at: new Date(row.updated_at as string).getTime(),
+          };
+          const local = await db.passwords.get(remote.id);
+          if (!local || remote.updated_at > local.updated_at) {
+            await db.passwords.put(remote);
+          }
         }
       },
     )
@@ -294,6 +355,7 @@ export async function pullAll(userId: string): Promise<void> {
     pullNotepad(userId),
     pullLabels(userId),
     pullTaskLabels(userId),
+    pullPasswords(userId),
   ]);
 }
 

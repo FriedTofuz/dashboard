@@ -41,18 +41,13 @@ function doneFraction(t: TaskForProgress): number {
 }
 
 export function progressForDay(tasks: TaskForProgress[]): ProgressResult {
-  // (1) Rule of 3 — 50% slice, 3 slots. Each slot's weight scales with its
-  // task's subtask count; empty slots contribute weight 1.
+  // (1) Rule of 3 — 50% slice, distributed evenly: each of the 3 slots is worth
+  // 50/3 ≈ 16.67%. A slot counts as done only when the parent task is in
+  // `state: 'done'` (subtasks within an R3 don't earn partial R3 credit — the
+  // task is either crossed off or it isn't).
   const r3Tasks = tasks.filter((t) => t.r3_slot != null);
-  const r3SlotsFilled = r3Tasks.length;
-  const emptyR3Slots = Math.max(0, 3 - r3SlotsFilled);
-  const r3WeightTotal =
-    r3Tasks.reduce((s, t) => s + subtaskWeight(t), 0) + emptyR3Slots;
-  const r3WeightDone = r3Tasks.reduce(
-    (s, t) => s + subtaskWeight(t) * doneFraction(t),
-    0,
-  );
-  const r3Pts = r3WeightTotal === 0 ? 0 : (r3WeightDone / r3WeightTotal) * 50;
+  const r3DoneCount = r3Tasks.filter((t) => t.state === 'done').length;
+  const r3Pts = (r3DoneCount / 3) * 50;
 
   // (2) Habits — 25% slice, weighted by habit_templates.weight × subtask scale.
   const habits = tasks.filter(

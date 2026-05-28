@@ -77,6 +77,10 @@ interface UiState {
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
 
+  /** Passwords manager modal — PIN-gated. */
+  passwordsOpen: boolean;
+  setPasswordsOpen: (open: boolean) => void;
+
   syncStatus: 'idle' | 'syncing' | 'error';
   setSyncStatus: (s: 'idle' | 'syncing' | 'error') => void;
 
@@ -132,6 +136,9 @@ export const useUiStore = create<UiState>()((set) => ({
 
   settingsOpen: false,
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+
+  passwordsOpen: false,
+  setPasswordsOpen: (open) => set({ passwordsOpen: open }),
 
   syncStatus: 'idle',
   setSyncStatus: (s) => set({ syncStatus: s }),

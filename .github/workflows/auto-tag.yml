@@ -1,0 +1,58 @@
+name: Auto-tag on main
+
+# Read package.json on every push to main and create a matching `vX.Y` tag if
+# one doesn't already exist. The convention: bump package.json version in the
+# same PR that merges to main, and this workflow creates the tag for you.
+#
+# - "2.2.0" in package.json → tag "v2.2"
+# - "2.2.1" → tag "v2.2.1" (patch releases keep the patch segment)
+# - A re-push of an existing version is a no-op.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          # Drop the trailing ".0" patch so 2.2.0 → 2.2, but keep 2.2.1 as-is.
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+)\.0$ ]]; then
+            TAG="v${BASH_REMATCH[1]}"
+          else
+            TAG="v$VERSION"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether tag already exists
+        id: check
+        run: |
+          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.version.outputs.tag }} already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" \
+            -m "Release ${{ steps.version.outputs.tag }} (package.json ${{ steps.version.outputs.version }})"
+          git push origin "${{ steps.version.outputs.tag }}"

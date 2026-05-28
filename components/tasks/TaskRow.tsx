@@ -165,7 +165,7 @@ export function TaskRow({
             {task.title}
             {task.subtasks && task.subtasks.length > 0 && (
               <span
-                className="ui muted"
+                className="ui muted subtask-counter"
                 style={{
                   fontSize: 12,
                   marginLeft: 8,
@@ -359,7 +359,7 @@ export function TaskRow({
       {/* ── Inline description with clickable links ─────────────────── */}
       {task.description && task.state !== 'running' && (
         <p
-          className="hand"
+          className="hand task-description"
           style={{
             fontSize: 13,
             color: 'var(--ink-faint)',
@@ -640,6 +640,7 @@ function SubtaskList({ taskId, subtasks, paddingLeft = 28 }: SubtaskListProps) {
         >
           <span
             aria-hidden
+            className={cn('subtask-check', s.done && 'is-done')}
             style={{
               width: 14,
               height: 14,

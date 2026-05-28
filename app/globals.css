@@ -132,6 +132,30 @@
   --sage-deep:  #DCE5F4;
 }
 
+/* ------------------------------------------------------------
+   Berkeley accent — vibrant gold accents (#FDB515).
+   Targeted, opt-in classes so the brighter gold lights up exactly
+   the spots the spec called out (task descriptions, progress %,
+   subtask checks + counters) without recoloring the carefully
+   tuned blue-on-gold R3 card interior or the Berkeley-blue stat
+   chip values.
+   ------------------------------------------------------------ */
+[data-accent="berkeley"] .task-description {
+  color: #FDB515;
+}
+[data-accent="berkeley"] .progress-pct:not(.progress-pct-over) {
+  color: #FDB515;
+}
+[data-accent="berkeley"] .subtask-counter {
+  color: #FDB515;
+}
+/* Subtask checkbox fill — leave the R3-scoped variant alone (it lives on a
+   gold wash background and uses the blue family for contrast). */
+[data-accent="berkeley"] .subtask-check.is-done {
+  background: #FDB515 !important;
+  border-color: #FDB515 !important;
+}
+
 /* ============================================================
    Dark mode tokens — see design/INSTRUCTIONS-V2.md §6
    ============================================================ */

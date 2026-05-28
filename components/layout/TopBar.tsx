@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { formatDayLabel, addDays, todayKey, toDayKey } from '@/lib/time/dayKey';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { useAccentStore } from '@/lib/store/useAccentStore';
+import { useDayHeat } from '@/lib/hooks/useDayHeat';
+import { heatColor, heatNeedsLightText } from '@/lib/compute/dayHeat';
 import { cn } from '@/lib/utils';
 
 function shortWeekday(full: string): string {
@@ -44,6 +47,13 @@ export function TopBar() {
   // Window of 5 days centered on the selected day (so the user always has
   // ±2 context when they jump to a date via search or the today button)
   const days = [-2, -1, 0, 1, 2].map((offset) => addDays(currentDayKey, offset));
+
+  // Heat tint for each pill — same red→yellow→green (or Berkeley blue) palette
+  // as the streak strip. Future days have no progress yet, so they fall through
+  // to plain ink.
+  const berkeley = useAccentStore((s) => s.accent === 'berkeley');
+  const heatCells = useDayHeat(days);
+  const heatByDay = new Map(heatCells.map((c) => [c.day, c]));
 
   const [search, setSearch] = useState('');
   const [searchError, setSearchError] = useState(false);
@@ -104,18 +114,52 @@ export function TopBar() {
           {days.map((key) => {
             const isSelected = key === currentDayKey;
             const isToday = key === today;
+            const isFuture = key > today;
             const [, , d] = key.split('-');
             const { weekday: w } = formatDayLabel(key);
 
+            const heat = heatByDay.get(key);
+            // A pill gets the progress tint when it represents a past or
+            // present day with logged content. Selected pill always wears
+            // terra so "you are here" stays unambiguous.
+            const showHeat =
+              !isSelected &&
+              !isFuture &&
+              heat != null &&
+              heat.hasContent &&
+              heat.logged;
+            const heatBg = showHeat
+              ? heatColor(heat.pct, true, true, berkeley)
+              : null;
+            const useLightText = showHeat
+              ? heatNeedsLightText(heat.pct, true, true, berkeley)
+              : false;
+
             // Selected = filled terra. Today (when not selected) gets a faint
-            // terra ring + dot so you can still find it. Others = plain ink.
+            // terra ring + dot so you can still find it. Past days with
+            // logged content wear their heat color. Everything else = plain ink.
             const border = isSelected
               ? '1.5px solid var(--terra-deep)'
               : isToday
                 ? '1.5px solid var(--terra)'
-                : '1.5px solid var(--ink)';
-            const background = isSelected ? 'var(--terra)' : 'transparent';
-            const color = isSelected ? 'var(--paper)' : 'var(--ink)';
+                : showHeat
+                  ? `1.5px solid ${heatBg}`
+                  : '1.5px solid var(--ink)';
+            const background = isSelected
+              ? 'var(--terra)'
+              : showHeat
+                ? (heatBg as string)
+                : 'transparent';
+            const color = isSelected
+              ? 'var(--paper)'
+              : useLightText
+                ? 'var(--paper)'
+                : 'var(--ink)';
+            const subColor = isSelected
+              ? 'var(--paper)'
+              : useLightText
+                ? 'var(--paper)'
+                : 'var(--ink-faint)';
 
             return (
               <button
@@ -123,7 +167,12 @@ export function TopBar() {
                 type="button"
                 onClick={() => setCurrentDayKey(key)}
                 aria-current={isSelected ? 'date' : undefined}
-                className={cn('wobble transition-colors', !isSelected && 'hover:bg-paper-warm')}
+                title={
+                  heat && heat.hasContent && heat.logged
+                    ? `${heat.pct}% complete`
+                    : undefined
+                }
+                className={cn('wobble transition-colors', !isSelected && !showHeat && 'hover:bg-paper-warm')}
                 style={{
                   border,
                   background,
@@ -139,7 +188,7 @@ export function TopBar() {
                 <span
                   className="tiny"
                   style={{
-                    color: isSelected ? 'var(--paper)' : 'var(--ink-faint)',
+                    color: subColor,
                     opacity: isSelected ? 0.9 : 1,
                     display: 'block',
                   }}
@@ -163,7 +212,7 @@ export function TopBar() {
                       width: 4,
                       height: 4,
                       borderRadius: '50%',
-                      background: 'var(--terra)',
+                      background: useLightText ? 'var(--paper)' : 'var(--terra)',
                     }}
                   />
                 )}

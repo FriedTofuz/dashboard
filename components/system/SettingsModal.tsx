@@ -368,6 +368,18 @@ function AboutPanel() {
       >
         Built with Next.js + Supabase + Dexie. Local-first; changes sync when you&apos;re online.
       </p>
+      <p
+        className="ui num"
+        style={{
+          fontSize: 12,
+          color: 'var(--ink-faint)',
+          lineHeight: 1.5,
+          margin: 0,
+          letterSpacing: '0.04em',
+        }}
+      >
+        Version 2.2
+      </p>
     </div>
   );
 }

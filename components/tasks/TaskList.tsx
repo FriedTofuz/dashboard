@@ -43,6 +43,9 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
 
   // Carry-over: unfinished, non-skipped tasks from prior days. Limited to the
   // today view so historical day views still show only that day's own tasks.
+  // R3 tasks ARE included here so an incomplete Rule-of-3 priority from
+  // yesterday can be rolled forward just like any other task — clicking the
+  // row opens move-to-day, which clears r3_slot when relocating.
   const carryover = useLiveQuery<Task[], Task[]>(
     () =>
       isViewingToday
@@ -55,7 +58,6 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
                 !t.skipped &&
                 t.template_id == null &&
                 t.habit_title == null &&
-                t.r3_slot == null &&
                 t.state !== 'done',
             )
             .toArray()
