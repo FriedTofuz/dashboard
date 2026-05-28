@@ -362,7 +362,9 @@ export function TaskRow({
           className="hand task-description"
           style={{
             fontSize: 13,
-            color: 'var(--ink-faint)',
+            // Color comes from CSS (.task-description) so the Berkeley
+            // override at the bottom of globals.css can flip it to gold
+            // without being beaten by an inline-style declaration.
             lineHeight: 1.3,
             margin: '2px 0 0',
             paddingLeft: showNumber ? 56 : 28,

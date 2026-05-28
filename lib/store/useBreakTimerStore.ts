@@ -27,10 +27,11 @@ export const useBreakTimerStore = create<BreakTimerState>()((set) => ({
   durationMs: null,
   start: (minutes) => {
     const ms = Math.max(1, Math.round(minutes * 60_000));
+    // v2.4.1: keep promptOpen=true so the dialog stays on screen, showing
+    // the live countdown rather than disappearing once a duration is picked.
     set({
       endsAt: Date.now() + ms,
       durationMs: ms,
-      promptOpen: false,
     });
   },
   cancel: () => set({ endsAt: null, durationMs: null, promptOpen: false }),

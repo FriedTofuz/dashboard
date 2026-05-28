@@ -21,23 +21,19 @@ function renderBareUrls(text: string, keyPrefix: string): React.ReactNode[] {
   const parts = text.split(BARE_URL_RE);
   return parts.map((part, i) => {
     if (i % 2 === 1) {
-      // captured URL
+      // captured URL — color via CSS (.rt-link) so the Berkeley theme can
+      // brighten it to the California Gold without inline styles
+      // blocking the override.
       return (
         <a
           key={`${keyPrefix}-u-${i}`}
+          className="rt-link"
           href={part}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          style={{
-            color: 'var(--sage-deep)',
-            textDecoration: 'underline',
-            textDecorationThickness: '1px',
-            textUnderlineOffset: '2px',
-            wordBreak: 'break-word',
-          }}
         >
           {part}
         </a>
@@ -64,18 +60,13 @@ export function renderRichText(text: string | null | undefined): React.ReactNode
     nodes.push(
       <a
         key={`md-${match.index}`}
+        className="rt-link"
         href={url}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
-        style={{
-          color: 'var(--sage-deep)',
-          textDecoration: 'underline',
-          textDecorationThickness: '1px',
-          textUnderlineOffset: '2px',
-        }}
       >
         {label}
       </a>,
