@@ -77,9 +77,12 @@ interface UiState {
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
 
-  /** Passwords manager modal — PIN-gated. */
-  passwordsOpen: boolean;
-  setPasswordsOpen: (open: boolean) => void;
+  /** Logbook modal — PIN-gated; hosts Passwords / Cards / Contacts tabs. */
+  logbookOpen: boolean;
+  setLogbookOpen: (open: boolean) => void;
+  /** Which logbook tab to open into. */
+  logbookTab: 'passwords' | 'cards' | 'contacts';
+  setLogbookTab: (tab: 'passwords' | 'cards' | 'contacts') => void;
 
   syncStatus: 'idle' | 'syncing' | 'error';
   setSyncStatus: (s: 'idle' | 'syncing' | 'error') => void;
@@ -137,8 +140,10 @@ export const useUiStore = create<UiState>()((set) => ({
   settingsOpen: false,
   setSettingsOpen: (open) => set({ settingsOpen: open }),
 
-  passwordsOpen: false,
-  setPasswordsOpen: (open) => set({ passwordsOpen: open }),
+  logbookOpen: false,
+  setLogbookOpen: (open) => set({ logbookOpen: open }),
+  logbookTab: 'passwords',
+  setLogbookTab: (tab) => set({ logbookTab: tab }),
 
   syncStatus: 'idle',
   setSyncStatus: (s) => set({ syncStatus: s }),

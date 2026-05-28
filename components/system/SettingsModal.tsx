@@ -55,9 +55,10 @@ export function SettingsModal({ userId }: SettingsModalProps) {
         style={{
           border: '1.5px solid var(--ink-soft)',
           borderRadius: 8,
-          // ~1.25× bump over the original 880×560 footprint.
-          width: 'min(1100px, 94vw)',
-          height: 'min(700px, 90vh)',
+          // 1.25× bump for v2.4 — matches the Logbook so both popups share
+          // the same footprint.
+          width: 'min(1375px, 94vw)',
+          height: 'min(875px, 90vh)',
           background: 'var(--paper)',
           boxShadow: 'var(--shadow)',
           overflow: 'hidden',
@@ -378,7 +379,7 @@ function AboutPanel() {
           letterSpacing: '0.04em',
         }}
       >
-        Version 2.3
+        Version 2.4
       </p>
     </div>
   );

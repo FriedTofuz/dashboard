@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import type { ThemeMode } from './useThemeStore';
 
 export type CurrentStatus = 'working' | 'breaking' | 'resting' | 'away';
 
@@ -11,6 +12,12 @@ interface StatusState {
    *  this is true so we don't yank the status out from under the user's
    *  explicit choice. Resets on page reload. */
   manuallySet: boolean;
+
+  /** Theme mode that was active *before* the user picked Resting. When they
+   *  switch off Resting we restore this so dark mode doesn't linger forever
+   *  if they preferred light/system before resting. null when not snapshotted. */
+  prevThemeMode: ThemeMode | null;
+  setPrevThemeMode: (mode: ThemeMode | null) => void;
 
   /** Set the status from a user action (menu pick). Marks manuallySet=true. */
   setManual: (status: CurrentStatus) => void;
@@ -43,6 +50,8 @@ function persist(status: CurrentStatus) {
 export const useStatusStore = create<StatusState>()((set, get) => ({
   status: readInitial(),
   manuallySet: false,
+  prevThemeMode: null,
+  setPrevThemeMode: (mode) => set({ prevThemeMode: mode }),
 
   setManual: (status) => {
     persist(status);

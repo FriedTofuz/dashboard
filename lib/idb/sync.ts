@@ -9,6 +9,8 @@ import {
   type Day,
   type NotepadPage,
   type Password,
+  type Contact,
+  type Card,
   type Settings,
 } from './db';
 
@@ -260,6 +262,81 @@ export async function pullPasswords(userId: string): Promise<void> {
   }
 }
 
+function remoteRowToContact(row: Record<string, unknown>): Contact {
+  return {
+    id:         row.id as string,
+    user_id:    row.user_id as string,
+    first_name: (row.first_name as string) ?? '',
+    last_name:  (row.last_name as string) ?? '',
+    company:    (row.company as string) ?? '',
+    phone:      (row.phone as string) ?? '',
+    email:      (row.email as string) ?? '',
+    pronouns:   (row.pronouns as string) ?? '',
+    address:    (row.address as string) ?? '',
+    birthday:   (row.birthday as string) ?? '',
+    notes:      (row.notes as string) ?? '',
+    created_at: new Date(row.created_at as string).getTime(),
+    updated_at: new Date(row.updated_at as string).getTime(),
+  };
+}
+
+export async function pullContacts(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull contacts failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    const remote = remoteRowToContact(row);
+    const local = await db.contacts.get(remote.id);
+    if (!local || remote.updated_at > local.updated_at) {
+      await db.contacts.put(remote);
+    }
+  }
+}
+
+function remoteRowToCard(row: Record<string, unknown>): Card {
+  return {
+    id:            row.id as string,
+    user_id:       row.user_id as string,
+    name:          (row.name as string) ?? '',
+    kind:          (row.kind as Card['kind']) ?? 'payment',
+    cardholder:    (row.cardholder as string) ?? '',
+    number:        (row.number as string) ?? '',
+    expires:       (row.expires as string) ?? '',
+    security_code: (row.security_code as string) ?? '',
+    issuer:        (row.issuer as string) ?? '',
+    notes:         (row.notes as string) ?? '',
+    created_at:    new Date(row.created_at as string).getTime(),
+    updated_at:    new Date(row.updated_at as string).getTime(),
+  };
+}
+
+export async function pullCards(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull cards failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    const remote = remoteRowToCard(row);
+    const local = await db.cards.get(remote.id);
+    if (!local || remote.updated_at > local.updated_at) {
+      await db.cards.put(remote);
+    }
+  }
+}
+
 // ── Realtime ───────────────────────────────────────────────────────────────
 
 let _channel: RealtimeChannel | null = null;
@@ -332,6 +409,38 @@ export function subscribeRealtime(userId: string): () => void {
         }
       },
     )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'contacts', filter: `user_id=eq.${userId}` },
+      async (payload) => {
+        const db = getDb();
+        if (payload.eventType === 'DELETE') {
+          await db.contacts.delete((payload.old as { id: string }).id);
+        } else if (payload.new) {
+          const remote = remoteRowToContact(payload.new as Record<string, unknown>);
+          const local = await db.contacts.get(remote.id);
+          if (!local || remote.updated_at > local.updated_at) {
+            await db.contacts.put(remote);
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'cards', filter: `user_id=eq.${userId}` },
+      async (payload) => {
+        const db = getDb();
+        if (payload.eventType === 'DELETE') {
+          await db.cards.delete((payload.old as { id: string }).id);
+        } else if (payload.new) {
+          const remote = remoteRowToCard(payload.new as Record<string, unknown>);
+          const local = await db.cards.get(remote.id);
+          if (!local || remote.updated_at > local.updated_at) {
+            await db.cards.put(remote);
+          }
+        }
+      },
+    )
     .subscribe();
 
   return () => {
@@ -356,6 +465,8 @@ export async function pullAll(userId: string): Promise<void> {
     pullLabels(userId),
     pullTaskLabels(userId),
     pullPasswords(userId),
+    pullContacts(userId),
+    pullCards(userId),
   ]);
 }
 

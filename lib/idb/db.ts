@@ -164,6 +164,45 @@ export interface Password {
   updated_at: number;
 }
 
+export interface Contact {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  company: string;
+  phone: string;
+  email: string;
+  pronouns: string;
+  address: string;
+  /** Free-form (MM/DD or YYYY-MM-DD or "October 4") — easier than picking a strict format. */
+  birthday: string;
+  notes: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export type CardKind = 'payment' | 'insurance' | 'membership' | 'other';
+
+export interface Card {
+  id: string;
+  user_id: string;
+  /** Display label e.g. "Chase Sapphire" or "Aetna PPO". */
+  name: string;
+  kind: CardKind;
+  cardholder: string;
+  /** Free-form: card number, member ID, account #. */
+  number: string;
+  /** "MM/YY" for payment cards; expiration / renewal date for others. */
+  expires: string;
+  /** CVV for payment cards; group # / plan code for insurance. */
+  security_code: string;
+  /** Bank / insurer / club. */
+  issuer: string;
+  notes: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface WriteQueueItem {
   id?: number;                       // autoincrement
   op: 'upsert' | 'delete';
@@ -183,6 +222,8 @@ export class SunflowerDB extends Dexie {
   labels!: Table<Label>;
   task_labels!: Table<TaskLabel>;
   passwords!: Table<Password>;
+  contacts!: Table<Contact>;
+  cards!: Table<Card>;
   write_queue!: Table<WriteQueueItem>;
 
   constructor() {
@@ -265,6 +306,20 @@ export class SunflowerDB extends Dexie {
           if (d.away === undefined) d.away = false;
         });
       });
+    // v6 — Logbook: contacts + cards tables.
+    this.version(6).stores({
+      tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+      habit_templates:'id, user_id, active, kind, [user_id+active]',
+      days:           '[user_id+day_key], user_id, day_key',
+      notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+      settings:       'user_id',
+      labels:         'id, user_id, name, [user_id+name]',
+      task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+      passwords:      'id, user_id, name, updated_at, [user_id+name]',
+      contacts:       'id, user_id, last_name, first_name, updated_at',
+      cards:          'id, user_id, name, kind, updated_at, [user_id+kind]',
+      write_queue:    '++id, table, row_id, attempted_at',
+    });
   }
 }
 
