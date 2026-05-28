@@ -24,6 +24,7 @@ import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
+import { PasswordsModal } from '@/components/system/PasswordsModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
@@ -248,6 +249,7 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
+      <PasswordsModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />

@@ -22,6 +22,7 @@ import { DndProvider } from '@/components/dnd/DndProvider';
 import { CommandPalette } from '@/components/system/CommandPalette';
 import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
+import { PasswordsModal } from '@/components/system/PasswordsModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
@@ -131,6 +132,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <CommandPalette userId={userId} />
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
+      <PasswordsModal userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

@@ -29,6 +29,7 @@ export function StatsActionRow({
   const setScratchOpen = useUiStore((s) => s.setScratchOpen);
   const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const setPasswordsOpen = useUiStore((s) => s.setPasswordsOpen);
   const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   const day = useLiveQuery(
@@ -91,7 +92,11 @@ export function StatsActionRow({
           accent={isLogged ? 'sage' : undefined}
         />
         <ActionButton placeholder />
-        <ActionButton placeholder />
+        <ActionButton
+          label="Passwords"
+          onClick={() => setPasswordsOpen(true)}
+          aria-label="Open password manager"
+        />
         <ActionButton
           label="Settings"
           onClick={() => setSettingsOpen(true)}

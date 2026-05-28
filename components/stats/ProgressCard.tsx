@@ -52,7 +52,7 @@ export function ProgressCard({ dayKey = todayKey(), deficitSeconds = 0 }: Progre
           today&apos;s progress · {doneCount} of {totalCount} done
         </span>
         <span
-          className="ui-b num"
+          className={`ui-b num progress-pct${overGoal ? ' progress-pct-over' : ''}`}
           style={{
             fontSize: 22,
             color: overGoal ? 'var(--ochre-deep)' : 'var(--sage-deep)',

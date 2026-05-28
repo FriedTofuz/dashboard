@@ -140,6 +140,23 @@ export interface Settings {
   deficit_seconds: number;           // cumulative running tally
   push_subscription: PushSubscriptionJSON | null;
   reduced_motion: boolean;
+  /** sha256 hex of the user's password-manager PIN. Default seeded to
+   *  hash("24850") on first run. The PIN is purely a UI gate — entries
+   *  are stored in plaintext at rest in both Dexie and Supabase. */
+  password_pin_hash?: string | null;
+  updated_at: number;
+}
+
+export interface Password {
+  id: string;
+  user_id: string;
+  name: string;
+  username: string;
+  password: string;
+  /** Free-form list of URLs / app references — newline or comma separated. */
+  sites: string;
+  note: string;
+  created_at: number;
   updated_at: number;
 }
 
@@ -161,6 +178,7 @@ export class SunflowerDB extends Dexie {
   settings!: Table<Settings>;
   labels!: Table<Label>;
   task_labels!: Table<TaskLabel>;
+  passwords!: Table<Password>;
   write_queue!: Table<WriteQueueItem>;
 
   constructor() {
@@ -213,6 +231,18 @@ export class SunflowerDB extends Dexie {
           if (t.habit_title === undefined) t.habit_title = null;
         });
       });
+    // v4 — passwords manager + PIN hash on settings.
+    this.version(4).stores({
+      tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+      habit_templates:'id, user_id, active, kind, [user_id+active]',
+      days:           '[user_id+day_key], user_id, day_key',
+      notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+      settings:       'user_id',
+      labels:         'id, user_id, name, [user_id+name]',
+      task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+      passwords:      'id, user_id, name, updated_at, [user_id+name]',
+      write_queue:    '++id, table, row_id, attempted_at',
+    });
   }
 }
 
