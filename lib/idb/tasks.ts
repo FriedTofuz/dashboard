@@ -3,6 +3,8 @@
 import { getDb, type Task } from './db';
 import { enqueue } from './queue';
 import { applyTaskToDeficit, reverseTaskFromDeficit } from '@/lib/compute/deficit';
+import { useStatusStore } from '@/lib/store/useStatusStore';
+import { useBreakTimerStore } from '@/lib/store/useBreakTimerStore';
 
 function now() { return Date.now(); }
 function newId() { return crypto.randomUUID(); }
@@ -69,6 +71,10 @@ export async function startTimer(taskId: string): Promise<void> {
   });
   const updated = await db.tasks.get(taskId);
   if (updated) enqueue('upsert', 'tasks', taskId, taskToRemote(updated));
+
+  // Auto-status: starting work flips to Working unless the user has
+  // manually picked something else this session.
+  useStatusStore.getState().setAuto('working');
 }
 
 export async function pauseTimer(taskId: string): Promise<void> {
@@ -78,6 +84,13 @@ export async function pauseTimer(taskId: string): Promise<void> {
 
   const elapsed = task.elapsed_ms + (task.started_at ? ts - task.started_at : 0);
   await updateTask(taskId, { state: 'paused', started_at: null, elapsed_ms: elapsed });
+
+  // Auto-status: pausing a task means the user is on a break. Flip to
+  // Breaking (if not manually overridden) and prompt for a break duration.
+  // The break-timer dialog is its own modal — it shows even if status was
+  // manually set, so the user can still decide on a duration.
+  useStatusStore.getState().setAuto('breaking');
+  useBreakTimerStore.getState().openPrompt();
 }
 
 /**

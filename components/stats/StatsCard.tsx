@@ -127,17 +127,19 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                   key={i}
                   className="wobble"
                   title={
-                    !d.hasContent
-                      ? `${d.day} · no tasks`
-                      : !d.logged
-                        ? `${d.day} · unlogged`
-                        : `${d.day} · ${d.pct}%`
+                    d.away
+                      ? `${d.day} · away (rest day)`
+                      : !d.hasContent
+                        ? `${d.day} · no tasks`
+                        : !d.logged
+                          ? `${d.day} · unlogged`
+                          : `${d.day} · ${d.pct}%`
                   }
                   style={{
                     aspectRatio: '1 / 1',
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley),
-                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley, d.away),
+                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley, d.away),
                   }}
                 />
               ))}
@@ -149,18 +151,20 @@ export function StatsCard({ userId, dayKey, deficitSeconds, mobile = false }: St
                   key={i}
                   className="wobble"
                   title={
-                    !d.hasContent
-                      ? `${d.day} · no tasks`
-                      : !d.logged
-                        ? `${d.day} · unlogged`
-                        : `${d.day} · ${d.pct}%`
+                    d.away
+                      ? `${d.day} · away (rest day)`
+                      : !d.hasContent
+                        ? `${d.day} · no tasks`
+                        : !d.logged
+                          ? `${d.day} · unlogged`
+                          : `${d.day} · ${d.pct}%`
                   }
                   style={{
                     width: 16,
                     height: 16,
                     borderRadius: 2,
-                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley),
-                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley),
+                    border: gradientBorder(d.pct, d.hasContent, d.logged, berkeley, d.away),
+                    background: gradientColor(d.pct, d.hasContent, d.logged, berkeley, d.away),
                   }}
                 />
               ))}

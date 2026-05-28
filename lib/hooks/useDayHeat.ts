@@ -9,6 +9,7 @@ export interface DayHeatCell {
   pct: number;
   hasContent: boolean;
   logged: boolean;
+  away: boolean;
 }
 
 function dayHasContent(list: Task[]): boolean {
@@ -51,8 +52,10 @@ export function useDayHeat(dayKeys: string[]): DayHeatCell[] {
   }
 
   const loggedSet = new Set<string>();
+  const awaySet = new Set<string>();
   for (const d of dayRecs ?? []) {
     if (d.logged_at != null) loggedSet.add(d.day_key);
+    if (d.away) awaySet.add(d.day_key);
   }
 
   return dayKeys.map((day) => {
@@ -62,6 +65,7 @@ export function useDayHeat(dayKeys: string[]): DayHeatCell[] {
       pct: progressForDay(list).value,
       hasContent: dayHasContent(list),
       logged: loggedSet.has(day),
+      away: awaySet.has(day),
     };
   });
 }
