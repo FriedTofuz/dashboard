@@ -20,31 +20,33 @@ interface StatusDef {
   dot: string;
 }
 
-/** Menu order is locked per the v2.2 spec: Working → Breaking → Resting → Away. */
+/** Menu order is locked per the v2.2 spec: Working → Breaking → Resting → Away.
+ *  Dot colors are pinned to the v2.3 spec hex values so they stay constant
+ *  regardless of accent theme (the dot is the status signal, not the theme). */
 const STATUSES: StatusDef[] = [
   {
     id: 'working',
     label: 'Working',
     description: 'On a task',
-    dot: 'var(--sage-deep)',
+    dot: '#3DED97',
   },
   {
     id: 'breaking',
     label: 'Breaking',
     description: 'Short break',
-    dot: 'var(--ochre)',
+    dot: '#FDB515',
   },
   {
     id: 'resting',
     label: 'Resting',
     description: 'Sleep / nap / eat · enables dark mode',
-    dot: '#5A6B8C',
+    dot: '#051094',
   },
   {
     id: 'away',
     label: 'Away',
     description: 'Out of office · today logged as rest day',
-    dot: 'var(--terra-deep)',
+    dot: '#FF2800',
   },
 ];
 
@@ -55,6 +57,8 @@ function statusDef(id: CurrentStatus): StatusDef {
 export function StatusMenu({ userId }: StatusMenuProps) {
   const status = useStatusStore((s) => s.status);
   const setManual = useStatusStore((s) => s.setManual);
+  const prevThemeMode = useStatusStore((s) => s.prevThemeMode);
+  const setPrevThemeMode = useStatusStore((s) => s.setPrevThemeMode);
   const setMode = useThemeStore((s) => s.setMode);
 
   const [open, setOpen] = useState(false);
@@ -83,10 +87,26 @@ export function StatusMenu({ userId }: StatusMenuProps) {
   async function pick(id: CurrentStatus) {
     setOpen(false);
     const prev = status;
+    if (id === prev) return; // no-op, but bail before any side effects
     setManual(id);
 
-    if (id === 'resting') {
+    // Resting ↔ dark mode. Snapshot current theme on the way in so we can
+    // restore it on the way out (otherwise dark mode would linger after the
+    // user gets back to work).
+    if (id === 'resting' && prev !== 'resting') {
+      setPrevThemeMode(useThemeStore.getState().mode);
       setMode('dark');
+    } else if (prev === 'resting' && id !== 'resting') {
+      // Restore the snapshotted mode; fall back to 'light' if we somehow
+      // never captured one (e.g., session restored mid-rest).
+      setMode(prevThemeMode ?? 'light');
+      setPrevThemeMode(null);
+    }
+
+    // Breaking — also open the break-timer prompt on a manual pick. (Pausing
+    // a task hits the same store via tasks.ts.) Per v2.3 fix.
+    if (id === 'breaking') {
+      useBreakTimerStore.getState().openPrompt();
     }
 
     // Away ⇔ today.away. Symmetric: switching off Away unmarks today.

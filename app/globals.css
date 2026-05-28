@@ -62,10 +62,11 @@
    so they read like ink on paper instead of vector neon.
    ============================================================ */
 :root[data-accent="berkeley"] {
-  /* sage → gold */
+  /* sage → gold. Opaque washes now use the v2.4 California-spec hues so
+     surfaces read as flat colored paper, not see-through tints. */
   --sage:               #D9930A;
   --sage-deep:          #A36F08;
-  --sage-wash:          #F4D88A;
+  --sage-wash:          #FFE88D;   /* opaque light gold — R3 card surface */
   --sage-tint:          rgba(217, 147, 10, 0.18);
 
   /* terracotta → Berkeley blue */
@@ -73,14 +74,15 @@
   --terra:              #2E4A8E;
   --terracotta-deep:    #002676;
   --terra-deep:         #002676;
-  --terracotta-wash:    #BFCBE0;
-  --terra-wash:         #BFCBE0;
+  --terracotta-wash:    #9FD1FF;   /* opaque light blue — non-R3 blue washes */
+  --terra-wash:         #9FD1FF;
   --terra-tint:         rgba(0, 38, 118, 0.18);
 
-  /* tasks box → Berkeley blue equivalent of the terracotta pot */
+  /* tasks box → Berkeley blue equivalent of the terracotta pot.
+     Opaque per spec so the flower-pot reads as solid sky blue paper. */
   --tasks-box-border:   #1F3A6B;
-  --tasks-box-bg:       rgba(106, 130, 176, 0.20);
-  --tasks-box-bg-active: rgba(106, 130, 176, 0.34);
+  --tasks-box-bg:       #9FD1FF;
+  --tasks-box-bg-active:#7FBFF8;   /* slightly stronger for drop-target state */
   --tasks-box-accent:   #6A82B0;
 }
 
@@ -147,7 +149,7 @@
   color: #FDB515;
 }
 [data-accent="berkeley"] .subtask-counter {
-  color: #FDB515;
+  color: #002676;
 }
 /* Subtask checkbox fill — leave the R3-scoped variant alone (it lives on a
    gold wash background and uses the blue family for contrast). */

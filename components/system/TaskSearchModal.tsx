@@ -196,6 +196,8 @@ export function TaskSearchModal({ userId }: Props) {
     <div
       className="fixed inset-0 z-50 flex items-start justify-center"
       style={{ background: 'rgba(28, 24, 20, 0.45)', paddingTop: '8vh' }}
+      // v2.4: backdrop click closes the search popup (Esc already does too).
+      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
       role="dialog"
       aria-modal="true"
       aria-label="Search tasks"
