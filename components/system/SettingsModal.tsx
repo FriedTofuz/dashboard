@@ -379,7 +379,7 @@ function AboutPanel() {
           letterSpacing: '0.04em',
         }}
       >
-        Version 2.4
+        Version 2.4.1
       </p>
     </div>
   );

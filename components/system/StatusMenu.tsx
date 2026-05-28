@@ -28,7 +28,7 @@ const STATUSES: StatusDef[] = [
     id: 'working',
     label: 'Working',
     description: 'On a task',
-    dot: '#3DED97',
+    dot: '#00A86B',
   },
   {
     id: 'breaking',

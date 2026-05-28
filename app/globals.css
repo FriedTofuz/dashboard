@@ -74,15 +74,15 @@
   --terra:              #2E4A8E;
   --terracotta-deep:    #002676;
   --terra-deep:         #002676;
-  --terracotta-wash:    #9FD1FF;   /* opaque light blue — non-R3 blue washes */
-  --terra-wash:         #9FD1FF;
+  --terracotta-wash:    #D2E9FF;   /* v2.4.1: lighter opaque blue */
+  --terra-wash:         #D2E9FF;
   --terra-tint:         rgba(0, 38, 118, 0.18);
 
-  /* tasks box → Berkeley blue equivalent of the terracotta pot.
-     Opaque per spec so the flower-pot reads as solid sky blue paper. */
+  /* tasks box → Berkeley blue equivalent of the terracotta pot. v2.4.1
+     uses the lighter #D2E9FF so descriptions stay legible against it. */
   --tasks-box-border:   #1F3A6B;
-  --tasks-box-bg:       #9FD1FF;
-  --tasks-box-bg-active:#7FBFF8;   /* slightly stronger for drop-target state */
+  --tasks-box-bg:       #D2E9FF;
+  --tasks-box-bg-active:#B7DAFA;   /* slightly stronger for drop-target state */
   --tasks-box-accent:   #6A82B0;
 }
 
@@ -135,18 +135,46 @@
 }
 
 /* ------------------------------------------------------------
+   Rich-text links + task description — class-driven colors so
+   themes can override without inline-style declarations winning.
+   Default: sage-deep (R3 cards re-scope this var to Berkeley
+   blue at the card level). Berkeley non-R3: California gold.
+   ------------------------------------------------------------ */
+.task-description {
+  color: var(--ink-faint);
+}
+.rt-link {
+  color: var(--sage-deep);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+/* ------------------------------------------------------------
    Berkeley accent — vibrant gold accents (#FDB515).
    Targeted, opt-in classes so the brighter gold lights up exactly
-   the spots the spec called out (task descriptions, progress %,
-   subtask checks + counters) without recoloring the carefully
-   tuned blue-on-gold R3 card interior or the Berkeley-blue stat
-   chip values.
+   the spots the spec called out (task descriptions, links,
+   progress %, subtask checks + counters) without recoloring the
+   carefully tuned blue-on-gold R3 card interior or the Berkeley
+   blue stat chip values. !important is required because some
+   sites (TaskRow descriptions, progress %) still carry legacy
+   inline color declarations that would otherwise outweigh the
+   theme rule.
    ------------------------------------------------------------ */
 [data-accent="berkeley"] .task-description {
+  color: #FDB515 !important;
+}
+[data-accent="berkeley"] .rt-link {
   color: #FDB515;
 }
+[data-accent="berkeley"] .r3-card .rt-link {
+  /* R3 cards keep their blue-on-gold contrast pattern — Berkeley
+     blue links inside the gold card surface. */
+  color: #002676;
+}
 [data-accent="berkeley"] .progress-pct:not(.progress-pct-over) {
-  color: #FDB515;
+  color: #FDB515 !important;
 }
 [data-accent="berkeley"] .subtask-counter {
   color: #002676;

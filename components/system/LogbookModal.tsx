@@ -52,6 +52,27 @@ export function LogbookModal({ userId }: LogbookModalProps) {
     if (open) void ensureDefaultPin(userId);
   }, [open, userId]);
 
+  // v2.4.1: Escape dismisses the Logbook (lock screen or unlocked). If the
+  // Change-PIN sub-dialog is open, prefer to close it first so Esc unwinds
+  // one layer at a time.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      if (changingPin) {
+        setChangingPin(false);
+      } else {
+        close();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // close is stable (calls into the store), so we intentionally exclude it
+    // from deps to avoid re-binding on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, changingPin]);
+
   if (!open) return null;
 
   return (
@@ -66,6 +87,7 @@ export function LogbookModal({ userId }: LogbookModalProps) {
       <div
         className="paper wobble"
         style={{
+          position: 'relative',
           border: '1.5px solid var(--ink-soft)',
           borderRadius: 8,
           // Same dimensions as Settings (1.25× the v2.2 sizing). When
@@ -79,12 +101,38 @@ export function LogbookModal({ userId }: LogbookModalProps) {
           display: 'flex',
         }}
       >
+        {/* Always-visible close — pinned to the popup frame's top-right so
+            it's reachable in both the lock screen and the unlocked shell.
+            v2.4.1: required affordance now that backdrop click is disabled. */}
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Close logbook"
+          title="Close (Esc)"
+          className="ui hover:bg-paper-warm transition-colors"
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            zIndex: 2,
+            background: 'var(--paper)',
+            border: '1.5px solid var(--ink-soft)',
+            color: 'var(--ink-faint)',
+            fontSize: 18,
+            lineHeight: 1,
+            padding: '4px 10px',
+            borderRadius: 5,
+            cursor: 'pointer',
+          }}
+        >
+          ×
+        </button>
+
         {unlocked ? (
           <UnlockedShell
             userId={userId}
             tab={tab}
             setTab={setTab}
-            onClose={close}
             onChangePin={() => setChangingPin(true)}
           />
         ) : (
@@ -106,12 +154,11 @@ export function LogbookModal({ userId }: LogbookModalProps) {
 // ── Unlocked shell: sidebar + tab body ───────────────────────────────────
 
 function UnlockedShell({
-  userId, tab, setTab, onClose, onChangePin,
+  userId, tab, setTab, onChangePin,
 }: {
   userId: string;
   tab: Tab;
   setTab: (t: Tab) => void;
-  onClose: () => void;
   onChangePin: () => void;
 }) {
   return (
@@ -188,7 +235,7 @@ function UnlockedShell({
         </button>
       </aside>
 
-      {/* Content */}
+      {/* Content — the popup-frame × at the top-right handles closing now. */}
       <section
         className="col"
         style={{
@@ -197,29 +244,6 @@ function UnlockedShell({
           position: 'relative',
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="ui hover:bg-paper-warm transition-colors"
-          style={{
-            position: 'absolute',
-            top: 14,
-            right: 14,
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--ink-faint)',
-            fontSize: 22,
-            lineHeight: 1,
-            padding: '4px 10px',
-            borderRadius: 4,
-            cursor: 'pointer',
-            zIndex: 1,
-          }}
-          aria-label="Close logbook"
-        >
-          ×
-        </button>
-
         {tab === 'passwords' && <PasswordsBody userId={userId} />}
         {tab === 'cards'     && <CardsBody userId={userId} />}
         {tab === 'contacts'  && <ContactsBody userId={userId} />}
