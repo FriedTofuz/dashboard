@@ -84,6 +84,10 @@ interface UiState {
   logbookTab: 'passwords' | 'cards' | 'contacts';
   setLogbookTab: (tab: 'passwords' | 'cards' | 'contacts') => void;
 
+  /** Finances modal — weekly entry log + budget planner. */
+  financesOpen: boolean;
+  setFinancesOpen: (open: boolean) => void;
+
   syncStatus: 'idle' | 'syncing' | 'error';
   setSyncStatus: (s: 'idle' | 'syncing' | 'error') => void;
 
@@ -144,6 +148,9 @@ export const useUiStore = create<UiState>()((set) => ({
   setLogbookOpen: (open) => set({ logbookOpen: open }),
   logbookTab: 'passwords',
   setLogbookTab: (tab) => set({ logbookTab: tab }),
+
+  financesOpen: false,
+  setFinancesOpen: (open) => set({ financesOpen: open }),
 
   syncStatus: 'idle',
   setSyncStatus: (s) => set({ syncStatus: s }),

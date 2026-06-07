@@ -6,6 +6,7 @@ import { getDb } from '@/lib/idb/db';
 import { useQuotes, quoteIndexForDay } from '@/lib/quotes';
 import { todayKey } from '@/lib/time/dayKey';
 import type { FlowerState } from '@/lib/compute/flowerState';
+import { APP_VERSION_DISPLAY } from '@/lib/version';
 
 interface FlowerCardProps {
   state: FlowerState;
@@ -78,16 +79,35 @@ export function FlowerCard({ state, dayKey, userId, dayNumber }: FlowerCardProps
           <span style={{ flex: '1 1 auto' }} />
         )}
         <span
-          className="ui num"
-          style={{
-            fontSize: 11,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-faint)',
-            flexShrink: 0,
-          }}
+          className="col"
+          style={{ alignItems: 'flex-end', gap: 1, flexShrink: 0 }}
         >
-          Day {computedDay}
+          <span
+            className="ui num"
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              lineHeight: 1.1,
+            }}
+          >
+            Day {computedDay}
+          </span>
+          <span
+            className="ui num"
+            style={{
+              fontSize: 10,
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              opacity: 0.7,
+              lineHeight: 1.1,
+            }}
+            title="App version"
+          >
+            {APP_VERSION_DISPLAY}
+          </span>
         </span>
       </div>
 

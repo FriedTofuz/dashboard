@@ -11,6 +11,7 @@ import {
   type Password,
   type Contact,
   type Card,
+  type FinanceEntry,
   type Settings,
 } from './db';
 
@@ -211,6 +212,10 @@ export async function pullSettings(userId: string): Promise<void> {
       push_subscription: null,
       reduced_motion: false,
       password_pin_hash: null,
+      finance_monthly_budget_cents: null,
+      finance_monthly_allowance_cents: null,
+      finance_savings_target_cents: null,
+      finance_savings_target_by: null,
       updated_at: Date.now(),
     };
     await db.settings.put(fresh);
@@ -228,6 +233,10 @@ export async function pullSettings(userId: string): Promise<void> {
     push_subscription: data.push_subscription ?? null,
     reduced_motion: data.reduced_motion ?? false,
     password_pin_hash: (data.password_pin_hash as string | null) ?? null,
+    finance_monthly_budget_cents:    (data.finance_monthly_budget_cents as number | null) ?? null,
+    finance_monthly_allowance_cents: (data.finance_monthly_allowance_cents as number | null) ?? null,
+    finance_savings_target_cents:    (data.finance_savings_target_cents as number | null) ?? null,
+    finance_savings_target_by:       (data.finance_savings_target_by as string | null) ?? null,
     updated_at: new Date(data.updated_at).getTime(),
   });
 }
@@ -337,6 +346,39 @@ export async function pullCards(userId: string): Promise<void> {
   }
 }
 
+function remoteRowToFinanceEntry(row: Record<string, unknown>): FinanceEntry {
+  return {
+    id:             row.id as string,
+    user_id:        row.user_id as string,
+    week_start:     row.week_start as string,
+    spending_cents: (row.spending_cents as number) ?? 0,
+    income_cents:   (row.income_cents as number) ?? 0,
+    note:           (row.note as string) ?? '',
+    created_at:     new Date(row.created_at as string).getTime(),
+    updated_at:     new Date(row.updated_at as string).getTime(),
+  };
+}
+
+export async function pullFinances(userId: string): Promise<void> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('finance_entries')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[sync] pull finance_entries failed', error);
+    return;
+  }
+  const db = getDb();
+  for (const row of data ?? []) {
+    const remote = remoteRowToFinanceEntry(row);
+    const local = await db.finance_entries.get(remote.id);
+    if (!local || remote.updated_at > local.updated_at) {
+      await db.finance_entries.put(remote);
+    }
+  }
+}
+
 // ── Realtime ───────────────────────────────────────────────────────────────
 
 let _channel: RealtimeChannel | null = null;
@@ -377,6 +419,10 @@ export function subscribeRealtime(userId: string): () => void {
             push_subscription: (row.push_subscription as PushSubscriptionJSON | null) ?? null,
             reduced_motion: (row.reduced_motion as boolean) ?? false,
             password_pin_hash: (row.password_pin_hash as string | null) ?? null,
+            finance_monthly_budget_cents:    (row.finance_monthly_budget_cents as number | null) ?? null,
+            finance_monthly_allowance_cents: (row.finance_monthly_allowance_cents as number | null) ?? null,
+            finance_savings_target_cents:    (row.finance_savings_target_cents as number | null) ?? null,
+            finance_savings_target_by:       (row.finance_savings_target_by as string | null) ?? null,
             updated_at: new Date(row.updated_at as string).getTime(),
           });
         }
@@ -441,6 +487,22 @@ export function subscribeRealtime(userId: string): () => void {
         }
       },
     )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'finance_entries', filter: `user_id=eq.${userId}` },
+      async (payload) => {
+        const db = getDb();
+        if (payload.eventType === 'DELETE') {
+          await db.finance_entries.delete((payload.old as { id: string }).id);
+        } else if (payload.new) {
+          const remote = remoteRowToFinanceEntry(payload.new as Record<string, unknown>);
+          const local = await db.finance_entries.get(remote.id);
+          if (!local || remote.updated_at > local.updated_at) {
+            await db.finance_entries.put(remote);
+          }
+        }
+      },
+    )
     .subscribe();
 
   return () => {
@@ -467,6 +529,7 @@ export async function pullAll(userId: string): Promise<void> {
     pullPasswords(userId),
     pullContacts(userId),
     pullCards(userId),
+    pullFinances(userId),
   ]);
 }
 

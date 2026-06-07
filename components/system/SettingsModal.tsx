@@ -11,6 +11,7 @@ import {
 import { HabitTemplatesEditorBody } from '@/components/tasks/HabitTemplatesEditor';
 import { ManageLabelsBody } from '@/components/labels/ManageLabelsModal';
 import { QuotesManagerBody } from '@/components/system/QuotesManagerModal';
+import { APP_VERSION_DISPLAY } from '@/lib/version';
 
 type Section = 'general' | 'appearance' | 'habits' | 'labels' | 'quotes' | 'about';
 
@@ -379,7 +380,7 @@ function AboutPanel() {
           letterSpacing: '0.04em',
         }}
       >
-        Version 2.4.1
+        Version {APP_VERSION_DISPLAY.replace(/^v/, '')}
       </p>
     </div>
   );

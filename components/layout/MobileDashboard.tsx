@@ -26,6 +26,7 @@ import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
 import { LogbookModal } from '@/components/system/LogbookModal';
 import { BreakTimerDialog } from '@/components/system/BreakTimerDialog';
+import { FinancesModal } from '@/components/system/FinancesModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { InstallPrompt } from '@/components/system/InstallPrompt';
 import { ThemeToggle } from '@/components/system/ThemeToggle';
@@ -251,7 +252,8 @@ export function MobileDashboard({ userId }: MobileDashboardProps) {
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
       <LogbookModal userId={userId} />
-      <BreakTimerDialog />
+      <FinancesModal userId={userId} />
+      <BreakTimerDialog userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
       <InstallPrompt />
