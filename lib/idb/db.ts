@@ -148,6 +148,13 @@ export interface Settings {
    *  hash("24850") on first run. The PIN is purely a UI gate — entries
    *  are stored in plaintext at rest in both Dexie and Supabase. */
   password_pin_hash?: string | null;
+  // ── Finance plan ──────────────────────────────────────────────────────
+  // Stored in cents to avoid float drift on money math. `null` = not set yet.
+  finance_monthly_budget_cents?: number | null;
+  finance_monthly_allowance_cents?: number | null;
+  finance_savings_target_cents?: number | null;
+  /** YYYY-MM-DD target date for the savings goal (e.g. end of semester). */
+  finance_savings_target_by?: string | null;
   updated_at: number;
 }
 
@@ -203,6 +210,20 @@ export interface Card {
   updated_at: number;
 }
 
+/** Weekly spending + income snapshot. Stored in cents so we never deal
+ *  with floating-point money. `week_start` is the Monday of the week in
+ *  YYYY-MM-DD form so we can index and sort lexicographically. */
+export interface FinanceEntry {
+  id: string;
+  user_id: string;
+  week_start: string;      // YYYY-MM-DD (Monday)
+  spending_cents: number;  // total spend that week
+  income_cents: number;    // total income that week
+  note: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface WriteQueueItem {
   id?: number;                       // autoincrement
   op: 'upsert' | 'delete';
@@ -224,6 +245,7 @@ export class SunflowerDB extends Dexie {
   passwords!: Table<Password>;
   contacts!: Table<Contact>;
   cards!: Table<Card>;
+  finance_entries!: Table<FinanceEntry>;
   write_queue!: Table<WriteQueueItem>;
 
   constructor() {
@@ -318,6 +340,21 @@ export class SunflowerDB extends Dexie {
       passwords:      'id, user_id, name, updated_at, [user_id+name]',
       contacts:       'id, user_id, last_name, first_name, updated_at',
       cards:          'id, user_id, name, kind, updated_at, [user_id+kind]',
+      write_queue:    '++id, table, row_id, attempted_at',
+    });
+    // v7 — Financial planner: weekly entries + finance fields on settings.
+    this.version(7).stores({
+      tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+      habit_templates:'id, user_id, active, kind, [user_id+active]',
+      days:           '[user_id+day_key], user_id, day_key',
+      notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+      settings:       'user_id',
+      labels:         'id, user_id, name, [user_id+name]',
+      task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+      passwords:      'id, user_id, name, updated_at, [user_id+name]',
+      contacts:       'id, user_id, last_name, first_name, updated_at',
+      cards:          'id, user_id, name, kind, updated_at, [user_id+kind]',
+      finance_entries:'id, user_id, week_start, updated_at, [user_id+week_start]',
       write_queue:    '++id, table, row_id, attempted_at',
     });
   }

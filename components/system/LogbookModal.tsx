@@ -101,38 +101,14 @@ export function LogbookModal({ userId }: LogbookModalProps) {
           display: 'flex',
         }}
       >
-        {/* Always-visible close — pinned to the popup frame's top-right so
-            it's reachable in both the lock screen and the unlocked shell.
-            v2.4.1: required affordance now that backdrop click is disabled. */}
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close logbook"
-          title="Close (Esc)"
-          className="ui hover:bg-paper-warm transition-colors"
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            zIndex: 2,
-            background: 'var(--paper)',
-            border: '1.5px solid var(--ink-soft)',
-            color: 'var(--ink-faint)',
-            fontSize: 18,
-            lineHeight: 1,
-            padding: '4px 10px',
-            borderRadius: 5,
-            cursor: 'pointer',
-          }}
-        >
-          ×
-        </button>
-
+        {/* v2.4.0: top-right × removed — close button now lives in the
+            sidebar below "Change PIN" so the popup frame stays clean. */}
         {unlocked ? (
           <UnlockedShell
             userId={userId}
             tab={tab}
             setTab={setTab}
+            onClose={close}
             onChangePin={() => setChangingPin(true)}
           />
         ) : (
@@ -154,11 +130,12 @@ export function LogbookModal({ userId }: LogbookModalProps) {
 // ── Unlocked shell: sidebar + tab body ───────────────────────────────────
 
 function UnlockedShell({
-  userId, tab, setTab, onChangePin,
+  userId, tab, setTab, onClose, onChangePin,
 }: {
   userId: string;
   tab: Tab;
   setTab: (t: Tab) => void;
+  onClose: () => void;
   onChangePin: () => void;
 }) {
   return (
@@ -232,6 +209,28 @@ function UnlockedShell({
           }}
         >
           Change PIN
+        </button>
+
+        {/* v2.4.0: close button sits directly below Change PIN as per spec. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close logbook"
+          title="Close (Esc)"
+          className="ui-b wobble hover:bg-paper-warm transition-colors"
+          style={{
+            marginTop: 4,
+            textAlign: 'center',
+            padding: '8px 12px',
+            borderRadius: 5,
+            border: '1.5px solid var(--ink-soft)',
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          Close
         </button>
       </aside>
 
@@ -323,12 +322,17 @@ function PinLockBody({
         Enter your PIN to unlock your passwords, cards, and contacts.
       </p>
 
-      <form onSubmit={handleSubmit} className="col" style={{ gap: 10 }}>
+      <form onSubmit={handleSubmit} className="col" style={{ gap: 10 }} autoComplete="off">
         <input
           ref={inputRef}
-          type="password"
+          // v2.4.0: type="text" + .pin-masked CSS so password managers
+          // don't offer to save the PIN every open. autoComplete
+          // "one-time-code" is the strongest "transient code, do not
+          // store" hint we can give the browser.
+          type="text"
           inputMode="numeric"
-          autoComplete="off"
+          autoComplete="one-time-code"
+          name="logbook-pin"
           maxLength={8}
           value={pin}
           onChange={(e) => {
@@ -336,7 +340,7 @@ function PinLockBody({
             if (error) setError(null);
           }}
           aria-label="PIN"
-          className="ui-b num wobble"
+          className="ui-b num wobble pin-masked"
           style={{
             border: `1.5px solid ${error ? 'var(--terra-deep)' : 'var(--ink-soft)'}`,
             borderRadius: 6,
@@ -344,7 +348,6 @@ function PinLockBody({
             background: 'var(--paper)',
             color: 'var(--ink)',
             fontSize: 22,
-            letterSpacing: '0.4em',
             textAlign: 'center',
             outline: 'none',
           }}
@@ -539,12 +542,14 @@ function PinField({
         {label}
       </span>
       <input
-        type="password"
+        type="text"
         inputMode="numeric"
+        autoComplete="one-time-code"
+        name="logbook-pin-change"
         maxLength={8}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className="ui-b num"
+        className="ui-b num pin-masked"
         style={{
           border: '1.5px solid var(--ink-soft)',
           borderRadius: 5,
@@ -552,7 +557,6 @@ function PinField({
           color: 'var(--ink)',
           padding: '8px 10px',
           fontSize: 18,
-          letterSpacing: '0.4em',
           textAlign: 'center',
           outline: 'none',
           width: '100%',

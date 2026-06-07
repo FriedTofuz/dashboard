@@ -3,21 +3,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBreakTimerStore } from '@/lib/store/useBreakTimerStore';
 import { useStatusStore } from '@/lib/store/useStatusStore';
-import { toastSuccess } from '@/lib/store/useToastStore';
+import { toast, toastSuccess } from '@/lib/store/useToastStore';
+import { adjustDeficit } from '@/lib/idb/settings';
 
 const PRESETS = [5, 10, 15, 30];
 
-/** Modal mounted once at the dashboard root with two roles:
+interface BreakTimerDialogProps {
+  userId: string;
+}
+
+/** Break-timer dialog mounted at the dashboard root. Three modes:
  *
- *  1. Picker: user picks a duration (5 / 10 / 15 / 30 / custom).
- *  2. Live countdown: once a break is started, the dialog stays visible per
- *     v2.4.1 spec — showing the remaining time, with an "End break" option
- *     and an × to dismiss the popup without canceling the timer (the status
- *     pill keeps ticking).
+ *  1. Picker (no break running) — pick a duration.
+ *  2. Running (endsAt in the future) — live mm:ss countdown + "End break now".
+ *  3. Overtime (endsAt in the past) — negative -mm:ss + "Resume work". The
+ *     overtime delta is added to the user's running time-deficit counter on
+ *     resume, per the v2.4.0 spec ("-10:00 is 10 minutes overtime, add this
+ *     to time deficit").
  *
- *  Plus a silent expiry watcher that fires when `endsAt` arrives: toasts the
- *  user, clears the manual flag, and flips status back to Working. */
-export function BreakTimerDialog() {
+ *  Ending the break (either manually pre-zero or via Resume work post-zero)
+ *  switches status back to Working and clears the manual flag so the next
+ *  start-timer auto-set still kicks in.
+ */
+export function BreakTimerDialog({ userId }: BreakTimerDialogProps) {
   const promptOpen = useBreakTimerStore((s) => s.promptOpen);
   const closePrompt = useBreakTimerStore((s) => s.closePrompt);
   const start = useBreakTimerStore((s) => s.start);
@@ -25,9 +33,10 @@ export function BreakTimerDialog() {
   const endsAt = useBreakTimerStore((s) => s.endsAt);
   const durationMs = useBreakTimerStore((s) => s.durationMs);
 
-  // Expiry watcher — one-shot timeout that fires on endsAt. Re-arms if
-  // endsAt changes (e.g., the user starts a new break before the previous
-  // one finished).
+  // Cross-zero toast — fires exactly once per timer when remaining transitions
+  // from positive to negative. We DON'T cancel here anymore (v2.4.0): the
+  // countdown keeps ticking into negatives so the user can see how far past
+  // their break they've drifted before clicking Resume work.
   const firedRef = useRef<number | null>(null);
   useEffect(() => {
     if (endsAt == null) {
@@ -39,13 +48,10 @@ export function BreakTimerDialog() {
     const handle = window.setTimeout(() => {
       if (firedRef.current === endsAt) return;
       firedRef.current = endsAt;
-      cancel();
-      useStatusStore.getState().clearManual();
-      useStatusStore.getState().setAuto('working');
-      toastSuccess('break over · back to working');
+      toast('break over · overtime is being tracked');
     }, delay);
     return () => window.clearTimeout(handle);
-  }, [endsAt, cancel]);
+  }, [endsAt]);
 
   // Tick-driven re-render once a second so the countdown view updates.
   const [, force] = useState(0);
@@ -71,6 +77,34 @@ export function BreakTimerDialog() {
     const n = parseInt(custom, 10);
     if (!Number.isFinite(n) || n <= 0) return;
     pick(n);
+  }
+
+  // Shared "wrap up the break" path used by both manual-end and resume-work.
+  // Always flips status to Working (per v2.4.0 spec #1), clears the manual
+  // flag so auto-status resumes, and cancels the timer. If `overtimeMs` is
+  // provided (resume-work case), it's added to the running deficit counter.
+  async function finishBreak(overtimeMs: number) {
+    if (overtimeMs > 0) {
+      const overtimeSec = Math.round(overtimeMs / 1000);
+      await adjustDeficit(userId, overtimeSec);
+      toastSuccess(`+${formatMmSs(overtimeMs)} overtime added to deficit`);
+    } else {
+      toastSuccess('back to working');
+    }
+    cancel();
+    useStatusStore.getState().clearManual();
+    useStatusStore.getState().setManual('working');
+  }
+
+  function handleManualEnd() {
+    // Pre-zero: no overtime accrued, just flip back.
+    void finishBreak(0);
+  }
+
+  function handleResume() {
+    if (endsAt == null) return;
+    const overtime = Math.max(0, Date.now() - endsAt);
+    void finishBreak(overtime);
   }
 
   return (
@@ -120,7 +154,12 @@ export function BreakTimerDialog() {
         </button>
 
         {counting ? (
-          <CountdownView endsAt={endsAt!} durationMs={durationMs} onEnd={cancel} />
+          <CountdownView
+            endsAt={endsAt!}
+            durationMs={durationMs}
+            onManualEnd={handleManualEnd}
+            onResume={handleResume}
+          />
         ) : (
           <PickerView
             custom={custom}
@@ -133,6 +172,13 @@ export function BreakTimerDialog() {
       </div>
     </div>
   );
+}
+
+function formatMmSs(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 // ── Picker view ─────────────────────────────────────────────────────────
@@ -266,19 +312,32 @@ function PickerView({
 // ── Countdown view ──────────────────────────────────────────────────────
 
 function CountdownView({
-  endsAt, durationMs, onEnd,
+  endsAt, durationMs, onManualEnd, onResume,
 }: {
   endsAt: number;
   durationMs: number | null;
-  onEnd: () => void;
+  onManualEnd: () => void;
+  onResume: () => void;
 }) {
-  const remaining = Math.max(0, endsAt - Date.now());
-  const m = Math.floor(remaining / 60_000);
-  const s = Math.floor((remaining % 60_000) / 1000);
+  const delta = endsAt - Date.now();
+  const overtime = delta < 0;
+  const abs = Math.abs(delta);
+  const m = Math.floor(abs / 60_000);
+  const s = Math.floor((abs % 60_000) / 1000);
 
-  const total = durationMs ?? remaining;
-  const elapsed = Math.max(0, Math.min(total, total - remaining));
-  const pct = total > 0 ? (elapsed / total) * 100 : 0;
+  // Pre-zero progress fills the bar over the planned duration. Once we're
+  // in overtime, the bar tops out at 100% and switches color so the eye
+  // catches the "you're past your break" signal even from a glance.
+  const total = durationMs ?? abs;
+  const elapsed = overtime
+    ? total
+    : Math.max(0, Math.min(total, total - delta));
+  const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 0;
+
+  const headline = overtime ? 'Overtime' : 'On break';
+  const sub = overtime
+    ? 'Your break ended — overtime is going on the deficit until you resume.'
+    : 'We’ll nudge you when it’s time to come back.';
 
   return (
     <>
@@ -291,10 +350,10 @@ function CountdownView({
             lineHeight: 1.1,
             fontWeight: 600,
             margin: 0,
-            color: 'var(--ink)',
+            color: overtime ? 'var(--terra-deep)' : 'var(--ink)',
           }}
         >
-          On break
+          {headline}
         </h3>
         <p
           className="ui"
@@ -305,7 +364,7 @@ function CountdownView({
             lineHeight: 1.45,
           }}
         >
-          We&apos;ll nudge you when it&apos;s time to come back.
+          {sub}
         </p>
       </div>
 
@@ -324,11 +383,12 @@ function CountdownView({
             fontWeight: 600,
             lineHeight: 1,
             letterSpacing: '0.02em',
-            color: 'var(--ink)',
+            color: overtime ? 'var(--terra-deep)' : 'var(--ink)',
             fontVariantNumeric: 'tabular-nums',
           }}
           aria-live="polite"
         >
+          {overtime ? '-' : ''}
           {m}:{s.toString().padStart(2, '0')}
         </span>
         <div
@@ -346,29 +406,48 @@ function CountdownView({
             style={{
               height: '100%',
               width: `${pct}%`,
-              background: 'var(--ochre)',
+              background: overtime ? 'var(--terra)' : 'var(--ochre)',
               transition: 'width 1s linear',
             }}
           />
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onEnd}
-        className="ui-b wobble hover:bg-paper-warm transition-colors"
-        style={{
-          border: '1.5px solid var(--ink-soft)',
-          background: 'var(--paper)',
-          color: 'var(--ink)',
-          padding: '10px 14px',
-          borderRadius: 6,
-          fontSize: 13,
-          cursor: 'pointer',
-        }}
-      >
-        End break now
-      </button>
+      {overtime ? (
+        <button
+          type="button"
+          onClick={onResume}
+          className="ui-b wobble transition-colors"
+          style={{
+            border: '1.5px solid var(--terra-deep)',
+            background: 'var(--terra)',
+            color: 'var(--paper)',
+            padding: '10px 14px',
+            borderRadius: 6,
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          Resume work · log {m}:{s.toString().padStart(2, '0')} overtime
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onManualEnd}
+          className="ui-b wobble hover:bg-paper-warm transition-colors"
+          style={{
+            border: '1.5px solid var(--ink-soft)',
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+            padding: '10px 14px',
+            borderRadius: 6,
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          End break now
+        </button>
+      )}
     </>
   );
 }

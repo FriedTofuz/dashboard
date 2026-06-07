@@ -135,6 +135,26 @@
 }
 
 /* ------------------------------------------------------------
+   PIN input visual mask — used on text inputs that hold PIN
+   digits but are NOT type=password. Decoupling the visual
+   masking from the input type stops browser password managers
+   from heuristically offering to save the PIN every time the
+   user unlocks the Logbook (a v2.4.0 fix).
+
+   `-webkit-text-security` is non-standard but supported in
+   Chromium and WebKit. Firefox lacks it — for Firefox users the
+   PIN renders as plain digits, which is the same as if they'd
+   set `type=text` directly. Acceptable trade for not nagging
+   the user about saving their PIN every open.
+   ------------------------------------------------------------ */
+.pin-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  letter-spacing: 0.5em;
+}
+
+/* ------------------------------------------------------------
    Rich-text links + task description — class-driven colors so
    themes can override without inline-style declarations winning.
    Default: sage-deep (R3 cards re-scope this var to Berkeley

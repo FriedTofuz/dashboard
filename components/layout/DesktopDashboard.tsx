@@ -24,6 +24,7 @@ import { TaskSearchModal } from '@/components/system/TaskSearchModal';
 import { SettingsModal } from '@/components/system/SettingsModal';
 import { LogbookModal } from '@/components/system/LogbookModal';
 import { BreakTimerDialog } from '@/components/system/BreakTimerDialog';
+import { FinancesModal } from '@/components/system/FinancesModal';
 import { ShortcutsListener } from '@/components/system/ShortcutsListener';
 import { Footer } from '@/components/layout/Footer';
 import { PrintHeader } from '@/components/layout/PrintHeader';
@@ -134,7 +135,8 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
       <TaskSearchModal userId={userId} />
       <SettingsModal userId={userId} />
       <LogbookModal userId={userId} />
-      <BreakTimerDialog />
+      <FinancesModal userId={userId} />
+      <BreakTimerDialog userId={userId} />
       <ManageLabelsModal userId={userId} />
       <QuotesManagerModal />
     </div>

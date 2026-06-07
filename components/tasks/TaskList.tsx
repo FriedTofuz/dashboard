@@ -9,6 +9,9 @@ import { TaskRow } from './TaskRow';
 import { AddTaskGhostRow } from './AddTaskGhostRow';
 import { todayKey } from '@/lib/time/dayKey';
 import { useUiStore } from '@/lib/store/useUiStore';
+import { moveTaskToDay } from '@/lib/idb/tasks';
+import { toast } from '@/lib/store/useToastStore';
+import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { cn } from '@/lib/utils';
 
 interface TaskListProps {
@@ -176,6 +179,9 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
         </div>
       ) : (
         <div className="col" style={{ gap: 6 }}>
+          {sortedCarryover.length > 1 && (
+            <RollOverAllRow tasks={sortedCarryover} targetDayKey={dayKey} />
+          )}
           {sortedCarryover.map((task) => (
             <TaskRow
               key={task.id}
@@ -198,6 +204,74 @@ export function TaskList({ dayKey = todayKey(), showAddRow = false }: TaskListPr
           {showAddRow && <AddTaskGhostRow />}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Roll-over-all banner ─────────────────────────────────────────────────
+
+/** Compact row that appears above the carryover list when there are 2+
+ *  carryover tasks, offering a one-click way to pull every unfinished
+ *  task from previous days onto today. Confirms first so an accidental
+ *  click doesn't wipe out the user's "from MM/DD" history all at once. */
+function RollOverAllRow({
+  tasks, targetDayKey,
+}: {
+  tasks: Task[];
+  targetDayKey: string;
+}) {
+  async function handleRollOver() {
+    const ok = await themedConfirm({
+      title: `roll over ${tasks.length} task${tasks.length === 1 ? '' : 's'}?`,
+      body: 'each will be moved onto today. r3 slots clear automatically.',
+      confirmLabel: 'roll over',
+      cancelLabel: 'cancel',
+    });
+    if (!ok) return;
+    // moveTaskToDay clears r3_slot as part of the move — same path the
+    // single-row prompt uses, so behavior is consistent.
+    await Promise.all(tasks.map((t) => moveTaskToDay(t.id, targetDayKey)));
+    toast(`rolled over ${tasks.length} task${tasks.length === 1 ? '' : 's'} to today`);
+  }
+
+  return (
+    <div
+      className="row items-center justify-between"
+      style={{
+        padding: '6px 8px',
+        gap: 8,
+        borderBottom: '1px dashed var(--rule)',
+        marginBottom: 4,
+      }}
+    >
+      <span
+        className="ui"
+        style={{
+          fontSize: 12,
+          color: 'var(--ink-faint)',
+          letterSpacing: '0.04em',
+        }}
+      >
+        {tasks.length} carried over from past days
+      </span>
+      <button
+        type="button"
+        onClick={() => void handleRollOver()}
+        className="ui-b wobble hover:bg-paper-warm transition-colors"
+        style={{
+          border: '1.5px solid var(--terra-deep)',
+          background: 'transparent',
+          color: 'var(--terra-deep)',
+          padding: '4px 12px',
+          borderRadius: 5,
+          fontSize: 12,
+          letterSpacing: '0.04em',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        ↻ Roll over all
+      </button>
     </div>
   );
 }

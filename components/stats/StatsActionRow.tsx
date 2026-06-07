@@ -30,6 +30,7 @@ export function StatsActionRow({
   const setTaskSearchOpen = useUiStore((s) => s.setTaskSearchOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const setLogbookOpen = useUiStore((s) => s.setLogbookOpen);
+  const setFinancesOpen = useUiStore((s) => s.setFinancesOpen);
   const currentDayKey = useUiStore((s) => s.currentDayKey);
 
   const day = useLiveQuery(
@@ -91,7 +92,11 @@ export function StatsActionRow({
           aria-label={isLogged ? 'Unlog this day' : 'Log this day for stats'}
           accent={isLogged ? 'sage' : undefined}
         />
-        <ActionButton placeholder />
+        <ActionButton
+          label="Finances"
+          onClick={() => setFinancesOpen(true)}
+          aria-label="Open financial planner"
+        />
         <ActionButton
           label="Logbook"
           onClick={() => setLogbookOpen(true)}
