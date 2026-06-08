@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { confirm as themedConfirm } from '@/lib/store/useConfirmStore';
 import { toast, toastSuccess } from '@/lib/store/useToastStore';
@@ -8,9 +8,11 @@ import { getDb, type Card, type CardKind } from '@/lib/idb/db';
 import {
   createCard,
   deleteCard,
+  readCardSecrets,
   updateCard,
   type NewCardInput,
 } from '@/lib/idb/cards';
+import { subscribeSessionCmk, isUnlocked } from '@/lib/crypto/session';
 import {
   EditorShell,
   EmptyState,
@@ -192,6 +194,34 @@ function maskNumber(n: string): string {
   return `••••  ${digits.slice(-4)}`;
 }
 
+/** Returns plaintext (`number`, `security_code`) for the card. Re-decrypts
+ *  whenever the session CMK changes (unlock / lock / recovery). When the
+ *  card is encrypted but the Logbook is locked, returns the placeholder
+ *  from readCardSecrets. */
+function useDecryptedCardSecrets(card: Card): { number: string; security_code: string } {
+  const [out, setOut] = useState<{ number: string; security_code: string }>({
+    number: card.is_encrypted ? '••••' : card.number,
+    security_code: card.is_encrypted ? '••••' : card.security_code,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    void readCardSecrets(card).then((v) => {
+      if (!cancelled) setOut(v);
+    });
+    const unsub = subscribeSessionCmk(() => {
+      void readCardSecrets(card).then((v) => {
+        if (!cancelled) setOut(v);
+      });
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.id, card.is_encrypted, card.number, card.security_code, card.number_enc, card.security_code_enc]);
+  return out;
+}
+
 function CardRow({
   entry, onEdit, onDelete,
 }: {
@@ -200,6 +230,8 @@ function CardRow({
   onDelete: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const plaintext = useDecryptedCardSecrets(entry);
+  const number = plaintext.number;
 
   function copyVal(text: string, label: string) {
     if (!text) return;
@@ -238,6 +270,25 @@ function CardRow({
             />
             {KIND_LABELS[entry.kind]}
           </span>
+          {entry.is_encrypted && (
+            <span
+              className="ui-b"
+              title="Encrypted at rest"
+              style={{
+                fontSize: 10,
+                letterSpacing: '0.08em',
+                color: 'var(--sage-deep)',
+                border: '1px solid var(--sage-deep)',
+                borderRadius: 999,
+                padding: '1px 6px',
+                display: 'inline-flex',
+                gap: 3,
+                alignItems: 'center',
+              }}
+            >
+              🔒 enc
+            </span>
+          )}
           {entry.issuer && (
             <span className="ui" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
               {entry.issuer}
@@ -261,8 +312,8 @@ function CardRow({
       meta={
         <code
           className="mono num"
-          onClick={() => entry.number && copyVal(entry.number, 'number')}
-          title={entry.number ? 'Click to copy' : ''}
+          onClick={() => number && copyVal(number, 'number')}
+          title={number ? 'Click to copy' : ''}
           style={{
             background: 'var(--paper-warm)',
             padding: '4px 8px',
@@ -272,10 +323,10 @@ function CardRow({
             fontSize: 12,
             minWidth: 120,
             textAlign: 'center',
-            cursor: entry.number ? 'pointer' : 'default',
+            cursor: number ? 'pointer' : 'default',
           }}
         >
-          {revealed ? entry.number || '—' : maskNumber(entry.number) || '—'}
+          {revealed ? number || '—' : maskNumber(number) || '—'}
         </code>
       }
       actions={
@@ -305,6 +356,10 @@ function CardEditor({
   const [name, setName] = useState(entry?.name ?? '');
   const [kind, setKind] = useState<CardKind>(entry?.kind ?? 'payment');
   const [cardholder, setCardholder] = useState(entry?.cardholder ?? '');
+  // For encrypted cards, `entry.number` is '' and the plaintext lives in
+  // *_enc — we kick off an async decrypt below and seed the field when it
+  // resolves. For plaintext cards, the initial state already has the
+  // value and the effect is a no-op.
   const [number, setNumber] = useState(entry?.number ?? '');
   const [expires, setExpires] = useState(entry?.expires ?? '');
   const [security_code, setSecurity] = useState(entry?.security_code ?? '');
@@ -312,6 +367,23 @@ function CardEditor({
   const [notes, setNotes] = useState(entry?.notes ?? '');
   const [reveal, setReveal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!entry?.is_encrypted) return;
+    if (!isUnlocked()) {
+      toast('cards are locked — unlock Logbook to edit');
+      onClose();
+      return;
+    }
+    let cancelled = false;
+    void readCardSecrets(entry).then(({ number: n, security_code: sc }) => {
+      if (cancelled) return;
+      setNumber(n);
+      setSecurity(sc);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const numberLabel =
     kind === 'insurance' ? 'Member ID' :

@@ -5,9 +5,18 @@ import { enqueue } from './queue';
 import { applyTaskToDeficit, reverseTaskFromDeficit } from '@/lib/compute/deficit';
 import { useStatusStore } from '@/lib/store/useStatusStore';
 import { useBreakTimerStore } from '@/lib/store/useBreakTimerStore';
+import { clamp, LIMITS } from '@/lib/validation/limits';
 
 function now() { return Date.now(); }
 function newId() { return crypto.randomUUID(); }
+
+/** v2.5 length caps for the two free-text task fields. */
+function sanitizeTask<T extends Partial<Task>>(t: T): T {
+  const out = { ...t };
+  if (out.title       !== undefined) out.title       = clamp(out.title, LIMITS.task_title);
+  if (out.description !== undefined) out.description = clamp(out.description, LIMITS.task_description);
+  return out;
+}
 
 // ── Create / update ───────────────────────────────────────────────────────
 
@@ -17,7 +26,10 @@ export async function createTask(
 ): Promise<string> {
   const id = newId();
   const ts = now();
-  const task: Task = { ...data, id, user_id: userId, created_at: ts, updated_at: ts };
+  const task: Task = {
+    ...sanitizeTask(data),
+    id, user_id: userId, created_at: ts, updated_at: ts,
+  };
   await getDb().tasks.add(task);
   enqueue('upsert', 'tasks', id, taskToRemote(task));
   return id;
@@ -25,7 +37,8 @@ export async function createTask(
 
 export async function updateTask(id: string, changes: Partial<Task>): Promise<void> {
   const ts = now();
-  await getDb().tasks.update(id, { ...changes, updated_at: ts });
+  const safe = sanitizeTask(changes);
+  await getDb().tasks.update(id, { ...safe, updated_at: ts });
   const updated = await getDb().tasks.get(id);
   if (updated) enqueue('upsert', 'tasks', id, taskToRemote(updated));
 }

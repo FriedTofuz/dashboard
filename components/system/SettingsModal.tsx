@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useUiStore } from '@/lib/store/useUiStore';
 import { useThemeStore, type ThemeMode } from '@/lib/store/useThemeStore';
 import {
@@ -12,6 +13,8 @@ import { HabitTemplatesEditorBody } from '@/components/tasks/HabitTemplatesEdito
 import { ManageLabelsBody } from '@/components/labels/ManageLabelsModal';
 import { QuotesManagerBody } from '@/components/system/QuotesManagerModal';
 import { APP_VERSION_DISPLAY } from '@/lib/version';
+import { getDb } from '@/lib/idb/db';
+import { setUiMaxWidth } from '@/lib/idb/settings';
 
 type Section = 'general' | 'appearance' | 'habits' | 'labels' | 'quotes' | 'about';
 
@@ -150,7 +153,7 @@ export function SettingsModal({ userId }: SettingsModalProps) {
           </button>
 
           {section === 'general'    && <GeneralPanel onClose={close} />}
-          {section === 'appearance' && <AppearancePanel />}
+          {section === 'appearance' && <AppearancePanel userId={userId} />}
           {section === 'habits'     && <HabitTemplatesEditorBody userId={userId} />}
           {section === 'labels'     && <ManageLabelsBody userId={userId} />}
           {section === 'quotes'     && <QuotesManagerBody />}
@@ -203,11 +206,24 @@ function GeneralPanel({ onClose }: { onClose: () => void }) {
 
 // ── Panel: Appearance ──────────────────────────────────────────────────
 
-function AppearancePanel() {
+/** v2.5 max-width preset values. `null` is encoded as `-1` in the <select>
+ *  because <option value> can't carry actual null. `0` means no cap (Full). */
+const WIDTH_OPTIONS: Array<{ value: number; label: string; sub: string }> = [
+  { value: -1,   label: 'Default (1500)',  sub: 'matches the legacy fixed layout' },
+  { value: 1200, label: 'Compact 1200',    sub: 'fits a 13" MacBook side-by-side' },
+  { value: 1500, label: 'Standard 1500',   sub: 'same as default, locked in cloud' },
+  { value: 1700, label: 'Wide 1700',       sub: 'large laptops + small monitors' },
+  { value: 1920, label: 'Extra-wide 1920', sub: 'external 1080p / FHD monitors' },
+  { value: 0,    label: 'Full width',      sub: 'fill the browser window' },
+];
+
+function AppearancePanel({ userId }: { userId: string }) {
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const accent = useAccentStore((s) => s.accent);
   const setAccent = useAccentStore((s) => s.setAccent);
+  const settings = useLiveQuery(() => getDb().settings.get(userId), [userId]);
+  const currentWidthValue = settings?.ui_max_width_px ?? -1;
 
   const modes: Array<{ id: ThemeMode; label: string }> = [
     { id: 'light',  label: 'Light' },
@@ -218,6 +234,44 @@ function AppearancePanel() {
   return (
     <div className="col" style={{ gap: 20 }}>
       <PanelHeading title="Appearance" />
+
+      <div className="col" style={{ gap: 6 }}>
+        <span className="tiny">max width (desktop)</span>
+        <p
+          className="ui"
+          style={{ margin: 0, fontSize: 12, color: 'var(--ink-faint)', lineHeight: 1.4 }}
+        >
+          Caps the desktop main column. Mobile is unaffected. Saved in the cloud, so it
+          follows you across devices.
+        </p>
+        <select
+          value={currentWidthValue}
+          onChange={(e) => {
+            const v = Number.parseInt(e.target.value, 10);
+            void setUiMaxWidth(userId, v === -1 ? null : v);
+          }}
+          aria-label="Max width preset"
+          className="ui"
+          style={{
+            border: '1.5px solid var(--ink-soft)',
+            borderRadius: 5,
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+            padding: '6px 10px',
+            fontSize: 13,
+            cursor: 'pointer',
+            alignSelf: 'flex-start',
+            minWidth: 240,
+          }}
+        >
+          {WIDTH_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <span className="ui" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+          {WIDTH_OPTIONS.find((o) => o.value === currentWidthValue)?.sub}
+        </span>
+      </div>
 
       <div className="col" style={{ gap: 6 }}>
         <span className="tiny">theme</span>

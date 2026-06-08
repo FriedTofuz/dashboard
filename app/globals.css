@@ -89,20 +89,23 @@
 [data-theme="dark"][data-accent="berkeley"] {
   --sage:               #F0BC4F;
   --sage-deep:          #FBD17A;
-  --sage-wash:          rgba(240, 188, 79, 0.18);
-  --sage-tint:          rgba(240, 188, 79, 0.10);
+  /* v2.5: switch from rgba washes to opaque dimmed brand hues. On the
+     lighter v2.5 paper (#2A2218), opaque surfaces read as dim-gold and
+     dim-navy paper rather than muddy translucent overlays. */
+  --sage-wash:          #4D3B0F;   /* dim California gold */
+  --sage-tint:          rgba(240, 188, 79, 0.14);
 
   --terracotta:         #7E96CB;
   --terra:              #7E96CB;
   --terracotta-deep:    #AEC0EA;
   --terra-deep:         #AEC0EA;
-  --terracotta-wash:    rgba(126, 150, 203, 0.18);
-  --terra-wash:         rgba(126, 150, 203, 0.18);
-  --terra-tint:         rgba(126, 150, 203, 0.10);
+  --terracotta-wash:    #1B2A52;   /* dim Berkeley navy */
+  --terra-wash:         #1B2A52;
+  --terra-tint:         rgba(126, 150, 203, 0.14);
 
   --tasks-box-border:   #AEC0EA;
-  --tasks-box-bg:       rgba(126, 150, 203, 0.14);
-  --tasks-box-bg-active: rgba(126, 150, 203, 0.28);
+  --tasks-box-bg:       #1B2A52;
+  --tasks-box-bg-active:#26396E;
   --tasks-box-accent:   #7E96CB;
 }
 
@@ -207,13 +210,20 @@
 }
 
 /* ============================================================
-   Dark mode tokens — see design/INSTRUCTIONS-V2.md §6
+   Dark mode tokens — v2.5 tuning.
+   The previous values (--paper #1A1612) sat too far below the
+   opaque Berkeley light-mode washes; the contrast between the
+   bright gold / blue accents and a near-black surface read as
+   harsh rather than warm-paper-by-lamplight. v2.5 raises the
+   base brown by ~12 luminance points, warm-shifts the edges,
+   and bumps accent alphas so cards still feel layered on the
+   slightly lighter surface.
    ============================================================ */
 [data-theme="dark"] {
-  --paper:              #1A1612;
-  --paper-warm:         #221D17;
-  --paper-shadow:       #100D0A;
-  --paper-edge:         #2F2820;
+  --paper:              #2A2218;
+  --paper-warm:         #332A1F;
+  --paper-shadow:       #1F1813;
+  --paper-edge:         #42382A;
 
   --ink:                #EDE3D0;
   --ink-soft:           #C9BFA9;
@@ -221,24 +231,24 @@
 
   --sage:               #9CBA8D;
   --sage-deep:          #B8D5A8;
-  --sage-wash:          rgba(156, 186, 141, 0.16);
-  --sage-tint:          rgba(156, 186, 141, 0.08);
+  --sage-wash:          rgba(156, 186, 141, 0.20);
+  --sage-tint:          rgba(156, 186, 141, 0.10);
 
   --terracotta:         #E08361;
   --terra:              #E08361;
   --terracotta-deep:    #F0A382;
   --terra-deep:         #F0A382;
-  --terracotta-wash:    rgba(224, 131, 97, 0.16);
-  --terra-wash:         rgba(224, 131, 97, 0.16);
-  --terra-tint:         rgba(224, 131, 97, 0.08);
+  --terracotta-wash:    rgba(224, 131, 97, 0.20);
+  --terra-wash:         rgba(224, 131, 97, 0.20);
+  --terra-tint:         rgba(224, 131, 97, 0.10);
 
   --ochre:              #E8B260;
   --ochre-deep:         #F4CB85;
-  --ochre-wash:         rgba(232, 178, 96, 0.18);
-  --ochre-tint:         rgba(232, 178, 96, 0.08);
+  --ochre-wash:         rgba(232, 178, 96, 0.22);
+  --ochre-tint:         rgba(232, 178, 96, 0.10);
 
-  --rule:               rgba(237, 227, 208, 0.10);
-  --rule-strong:        rgba(237, 227, 208, 0.22);
+  --rule:               rgba(237, 227, 208, 0.14);
+  --rule-strong:        rgba(237, 227, 208, 0.26);
 }
 
 /* ============================================================

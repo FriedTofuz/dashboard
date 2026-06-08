@@ -216,6 +216,11 @@ export async function pullSettings(userId: string): Promise<void> {
       finance_monthly_allowance_cents: null,
       finance_savings_target_cents: null,
       finance_savings_target_by: null,
+      card_encryption_enabled: false,
+      card_pin_keybox: null,
+      card_recovery_keybox: null,
+      card_recovery_check: null,
+      ui_max_width_px: null,
       updated_at: Date.now(),
     };
     await db.settings.put(fresh);
@@ -237,6 +242,11 @@ export async function pullSettings(userId: string): Promise<void> {
     finance_monthly_allowance_cents: (data.finance_monthly_allowance_cents as number | null) ?? null,
     finance_savings_target_cents:    (data.finance_savings_target_cents as number | null) ?? null,
     finance_savings_target_by:       (data.finance_savings_target_by as string | null) ?? null,
+    card_encryption_enabled: (data.card_encryption_enabled as boolean) ?? false,
+    card_pin_keybox:         (data.card_pin_keybox as string | null) ?? null,
+    card_recovery_keybox:    (data.card_recovery_keybox as string | null) ?? null,
+    card_recovery_check:     (data.card_recovery_check as string | null) ?? null,
+    ui_max_width_px:         (data.ui_max_width_px as number | null) ?? null,
     updated_at: new Date(data.updated_at).getTime(),
   });
 }
@@ -311,18 +321,21 @@ export async function pullContacts(userId: string): Promise<void> {
 
 function remoteRowToCard(row: Record<string, unknown>): Card {
   return {
-    id:            row.id as string,
-    user_id:       row.user_id as string,
-    name:          (row.name as string) ?? '',
-    kind:          (row.kind as Card['kind']) ?? 'payment',
-    cardholder:    (row.cardholder as string) ?? '',
-    number:        (row.number as string) ?? '',
-    expires:       (row.expires as string) ?? '',
-    security_code: (row.security_code as string) ?? '',
-    issuer:        (row.issuer as string) ?? '',
-    notes:         (row.notes as string) ?? '',
-    created_at:    new Date(row.created_at as string).getTime(),
-    updated_at:    new Date(row.updated_at as string).getTime(),
+    id:                row.id as string,
+    user_id:           row.user_id as string,
+    name:              (row.name as string) ?? '',
+    kind:              (row.kind as Card['kind']) ?? 'payment',
+    cardholder:        (row.cardholder as string) ?? '',
+    number:            (row.number as string) ?? '',
+    expires:           (row.expires as string) ?? '',
+    security_code:     (row.security_code as string) ?? '',
+    issuer:            (row.issuer as string) ?? '',
+    notes:             (row.notes as string) ?? '',
+    is_encrypted:      (row.is_encrypted as boolean) ?? false,
+    number_enc:        (row.number_enc as string | null) ?? null,
+    security_code_enc: (row.security_code_enc as string | null) ?? null,
+    created_at:        new Date(row.created_at as string).getTime(),
+    updated_at:        new Date(row.updated_at as string).getTime(),
   };
 }
 
@@ -423,6 +436,11 @@ export function subscribeRealtime(userId: string): () => void {
             finance_monthly_allowance_cents: (row.finance_monthly_allowance_cents as number | null) ?? null,
             finance_savings_target_cents:    (row.finance_savings_target_cents as number | null) ?? null,
             finance_savings_target_by:       (row.finance_savings_target_by as string | null) ?? null,
+            card_encryption_enabled: (row.card_encryption_enabled as boolean) ?? false,
+            card_pin_keybox:         (row.card_pin_keybox as string | null) ?? null,
+            card_recovery_keybox:    (row.card_recovery_keybox as string | null) ?? null,
+            card_recovery_check:     (row.card_recovery_check as string | null) ?? null,
+            ui_max_width_px:         (row.ui_max_width_px as number | null) ?? null,
             updated_at: new Date(row.updated_at as string).getTime(),
           });
         }

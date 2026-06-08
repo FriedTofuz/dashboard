@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sunflower
 
-## Getting Started
+A local-first personal productivity dashboard. Next.js 14 App Router on the
+front, Supabase for cloud sync and auth, Dexie/IndexedDB for the offline
+store.
 
-First, run the development server:
+## Quick start
 
 ```bash
+cp .env.local.example .env.local   # fill in Supabase + VAPID keys
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project layout
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/                Next.js 14 App Router (pages, API routes, auth callbacks)
+components/         React components, grouped by area (tasks, system, layout, etc.)
+lib/
+  crypto/           AES-GCM helpers for card encryption
+  idb/              Dexie schema, sync queue, per-table helpers
+  store/            Zustand stores
+  supabase/         Browser + server clients
+  validation/       Length-cap source of truth
+public/             Static assets + PWA manifest
+supabase/migrations/ Numbered SQL migrations (0001 → 0009)
+docs/
+  security.md      Threat model + recovery flow
+  releases.md      Version / tag / release flow
+  design/          v2 design handoff prototype + visual spec
+.github/workflows/  Auto-tag + GitHub Release on merge to main
+```
 
-## Learn More
+## Versioning
 
-To learn more about Next.js, take a look at the following resources:
+`package.json`'s `version` field is the single source of truth.
+`lib/version.ts` re-exports it as `APP_VERSION_DISPLAY` so every place
+that shows the version reads the same string. The full release flow is
+documented in [`docs/releases.md`](docs/releases.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Security
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The security model — what's encrypted, the recovery code flow, and what is
+intentionally out of scope — lives in [`docs/security.md`](docs/security.md).

@@ -4,6 +4,7 @@ import { getDb, type NotepadPage } from './db';
 import { enqueue } from './queue';
 import { setDayNotes } from './days';
 import { addDays } from '@/lib/time/dayKey';
+import { clamp, LIMITS } from '@/lib/validation/limits';
 
 function newId() { return crypto.randomUUID(); }
 
@@ -63,11 +64,14 @@ export async function archiveNotepadRange(
     ? `notes · ${startKey}`
     : `notes · ${startKey} → ${endKey}`;
 
+  // Cap the aggregated body at the same limit as the server-side CHECK
+  // (100 KB) — extremely long ranges get truncated rather than rejected.
+  const body = clamp(parts.join('\n\n'), LIMITS.notepad_body);
   const page: NotepadPage = {
     id: newId(),
     user_id: userId,
     title,
-    body: parts.join('\n\n'),
+    body,
     archived: true,
     archived_at: ts,
     sort_order: ts,

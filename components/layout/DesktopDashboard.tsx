@@ -51,6 +51,11 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
 
   const settings = useLiveQuery(() => getDb().settings.get(userId), [userId]);
   const deficitSeconds = settings?.deficit_seconds ?? 0;
+  // v2.5 max-width: null → default 1500 px, 0 → no cap (Full width),
+  // otherwise one of the four numeric presets.
+  const widthSetting = settings?.ui_max_width_px ?? null;
+  const mainMaxWidth: number | string =
+    widthSetting === 0 ? 'none' : (widthSetting ?? 1500);
   // Sunflower is locked to TODAY — its state and quote shouldn't shift when
   // the user is browsing a past or future day.
   const today = todayKey();
@@ -66,7 +71,7 @@ export function DesktopDashboard({ userId }: DesktopDashboardProps) {
         <main
           className="flex-1"
           style={{
-            maxWidth: 1500,
+            maxWidth: mainMaxWidth,
             margin: '0 auto',
             width: '100%',
             padding: '36px 44px',
