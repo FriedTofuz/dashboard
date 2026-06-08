@@ -117,4 +117,8 @@ alter table notepad_pages
 -- --- Advisor fixes ---------------------------------------
 alter function public.touch_updated_at() set search_path = public, pg_temp;
 
-revoke execute on function public.rls_auto_enable() from anon, authenticated;
+-- Revoke from PUBLIC too — Postgres functions are EXECUTE-grantable to
+-- PUBLIC by default, and `anon` + `authenticated` inherit from PUBLIC.
+-- Revoking from the named roles alone leaves the function callable via
+-- the PUBLIC grant, which is exactly what the advisor was flagging.
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
