@@ -155,6 +155,24 @@ export interface Settings {
   finance_savings_target_cents?: number | null;
   /** YYYY-MM-DD target date for the savings goal (e.g. end of semester). */
   finance_savings_target_by?: string | null;
+
+  // ── v2.5 card encryption ──────────────────────────────────────────────
+  /** True once the user has opted in to PIN-derived card-field encryption. */
+  card_encryption_enabled?: boolean;
+  /** CMK wrapped by PIN-derived KEK. base64(salt|iv|ct|tag). */
+  card_pin_keybox?: string | null;
+  /** CMK wrapped by recovery-code-derived KEK. base64(salt|iv|ct|tag). */
+  card_recovery_keybox?: string | null;
+  /** Hex HMAC of the recovery code — used to validate user input
+   *  before attempting the slow AES decryption. */
+  card_recovery_check?: string | null;
+
+  // ── v2.5 display knob ────────────────────────────────────────────────
+  /** Desktop main column max-width cap.
+   *  null = use default (1500); 0 = no cap ("Full");
+   *  otherwise one of 1200 / 1500 / 1700 / 1920. */
+  ui_max_width_px?: number | null;
+
   updated_at: number;
 }
 
@@ -206,6 +224,16 @@ export interface Card {
   /** Bank / insurer / club. */
   issuer: string;
   notes: string;
+
+  // ── v2.5 encryption ─────────────────────────────────────────────────
+  /** True when `number` and `security_code` are stored encrypted in the
+   *  `*_enc` siblings (and the plaintext columns are ''). */
+  is_encrypted?: boolean;
+  /** base64(iv|ct|tag) of the AES-GCM-encrypted `number`. */
+  number_enc?: string | null;
+  /** base64(iv|ct|tag) of the AES-GCM-encrypted `security_code`. */
+  security_code_enc?: string | null;
+
   created_at: number;
   updated_at: number;
 }
@@ -357,6 +385,39 @@ export class SunflowerDB extends Dexie {
       finance_entries:'id, user_id, week_start, updated_at, [user_id+week_start]',
       write_queue:    '++id, table, row_id, attempted_at',
     });
+    // v8 — v2.5 card encryption + ui_max_width_px on settings.
+    // Stores are unchanged; only column shapes grew. The Dexie schema
+    // version bump still has to fire so existing IndexedDB databases
+    // pick up the new (optional) columns on Card / Settings.
+    this.version(8)
+      .stores({
+        tasks:          'id, user_id, day_key, template_id, state, updated_at, [user_id+day_key], [user_id+template_id+day_key]',
+        habit_templates:'id, user_id, active, kind, [user_id+active]',
+        days:           '[user_id+day_key], user_id, day_key',
+        notepad_pages:  'id, user_id, archived, updated_at, [user_id+archived]',
+        settings:       'user_id',
+        labels:         'id, user_id, name, [user_id+name]',
+        task_labels:    'id, task_id, label_id, user_id, [task_id+label_id], [user_id+label_id]',
+        passwords:      'id, user_id, name, updated_at, [user_id+name]',
+        contacts:       'id, user_id, last_name, first_name, updated_at',
+        cards:          'id, user_id, name, kind, updated_at, [user_id+kind]',
+        finance_entries:'id, user_id, week_start, updated_at, [user_id+week_start]',
+        write_queue:    '++id, table, row_id, attempted_at',
+      })
+      .upgrade(async (tx) => {
+        // Backfill encryption defaults so existing cards explicitly read
+        // as plaintext rather than `undefined` (which CardsBody treats
+        // ambiguously).
+        await tx.table('cards').toCollection().modify((c) => {
+          if (c.is_encrypted === undefined) c.is_encrypted = false;
+          if (c.number_enc === undefined) c.number_enc = null;
+          if (c.security_code_enc === undefined) c.security_code_enc = null;
+        });
+        await tx.table('settings').toCollection().modify((s) => {
+          if (s.card_encryption_enabled === undefined) s.card_encryption_enabled = false;
+          if (s.ui_max_width_px === undefined) s.ui_max_width_px = null;
+        });
+      });
   }
 }
 
